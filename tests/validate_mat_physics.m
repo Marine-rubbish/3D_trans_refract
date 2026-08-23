@@ -1,4 +1,4 @@
-﻿clc; clear;
+clc; clear;
 
 %% 验证匹配的波峰/锚系对是否满足传播时间物理规律。
 % 此处使用的规则：
@@ -6,12 +6,12 @@
 %   signed_along_m > 0 表示锚系沿波峰传播方向位于波峰前方。
 %   物理上一致的配对应满足 sign(dt) == sign(signed_along_m)。
 
-project_root = fileparts(fileparts(mfilename('fullpath')));
+project_root = '.';
 addpath(genpath(fullfile(project_root, 'utils')));
 
 mat_patterns = { ...
-    fullfile(project_root, 'data', 'matched_crests_params_*.mat'), ...
-    fullfile(project_root, 'data', 'matched_results*.mat'), ...
+    fullfile(project_root, 'data', '*crest_params*.mat'), ...
+    fullfile(project_root, 'data', '*matched_results*.mat'), ...
     fullfile(project_root, 'src', 'matched_results*.mat') ...
 };
 mat_files = dir(fullfile(project_root, '__no_mat_file__'));

@@ -81,7 +81,7 @@ for k = 1:length(shp_filelist)
         if cDir > 45 & cDir < 180
             [dirDegOut, doFlip, ~] = maybeFlipCrestDir(rawLat, rawLon, mooring_lat, mooring_lon);
             if doFlip
-                dirDeg = dirDegOut;
+                cDir = dirDegOut;
             end
         end
 
