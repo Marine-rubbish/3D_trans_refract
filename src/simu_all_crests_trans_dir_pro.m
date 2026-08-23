@@ -1,4 +1,4 @@
-﻿% simu_all_crests_trans_dir_mode_update.m
+% simu_all_crests_trans_dir_mode_update.m
 clc; clear; close all;
 
 addpath(genpath('..\utils')); % 确保包含 reachPointByTranslation 等函数
@@ -8,7 +8,11 @@ angle_tol = 90; % 角度容差（度）
 resample_res = 250; % 波峰线重采样分辨率 (m)
 lambda_dir = 0.02;
 lambda_dir = 0;
-output_mat_name = 'matched_results_with_mode_90deg_15_165.mat';
+output_mat_name = 'matched_results_with_flip.mat';
+
+% Debug entry points. Keep disabled for the normal batch run.
+DEBUG.plotKPoint = false;
+DEBUG.targetCrestIdx = []; % e.g. 1388; [] means allow every crest when plotting is enabled
 
 % 系泊点坐标
 mooring_lat = 20.816666666666666;
@@ -26,20 +30,8 @@ shp_filelist = dir(fullfile(shp_dir, '*.shp'));
 
 % 读取系泊数据
 mooring_dir = 'F:\research\月份挑内波数据';
-% 注意：请确保文件名与你实际的 Excel 文件名一致
 mooring_name = '2020年内波时间与方向.xlsx'; 
 T = readtable(fullfile(mooring_dir, mooring_name));
-
-% --- 数据列解析 (根据你的 csv 修改) ---
-% 假设列结构: [Mode, StartTime, Direction(或EndTime), Speed, ...]
-% 你的 CSV 第一列 file_type 是 Mode
-% 你的 CSV 第二列 Var2 是 Time
-% !重要提示!: 请确认你的 Excel 第3列是“观测方向(度)”还是“结束时间”？
-% 如果现在的第3列是时间，你需要确保代码读入的是方向列。
-% 下面代码假设 T 的第 3 列是方向 (obs_dirs)。如果不是，请修改索引 T{:, 3}。
-
-% 筛除无效行 (假设基于第4列和第5列判空，如果你的表结构变了，请调整这里)
-% T = T(~(isnan(T{:,4}) | isnan(T{:,5})), :); 
 
 obs_modes = T{:, 1}; % <--- 修改点1：从第1列读取 Mode (1或2)
 st_times  = T{:, 2}; % 第2列是时间
@@ -100,171 +92,27 @@ for k = 1:length(shp_filelist)
         %     % end
         % end
 
-        [resLat, resLon, peakLat, peakLon, s_peak, L_total] = analyze_crest_shape(rawLat, rawLon, resample_res);
-    
-        % 存入 cData (后续还要用)
-        cData.resLat = resLat; cData.resLon = resLon;
-        cData.peakLat = peakLat; cData.peakLon = peakLon;
-        cData.s_peak = s_peak; cData.L_total = L_total;
+        cData = buildCrestData(rawLat, rawLon, resample_res);
         temp_crest_data{global_idx} = cData;
-    
-        % 2. 调用传播函数 (传入 resLat, resLon 和 s_peak)
-        % 注意：这里 radius 设为 100km (100000m)
-        [isPass, ~, s_hit_meters, ~, ~, ~, ~] = reachMooringByTranslation( ...
-            resLat, resLon, shp_time, ...
-            mooring_lat, mooring_lon, [0.1 5.0], 100000, s_peak); % <--- 传入 s_peak
-        
-        isPass_list(global_idx) = isPass;
-    
-        % 3. 分段归一化计算 K 值
-        K_val = NaN;
-        if ~isnan(s_hit_meters) && ~isnan(s_peak) && L_total > 0
-            s_hit = max(0, min(s_hit_meters, L_total));
-            
-            if s_hit <= s_peak
-                % SW段 (-1 ~ 0)
-                if s_peak > 1e-3
-                    K_val = (s_hit - s_peak) / s_peak;
-                else
-                    K_val = -1; 
-                end
-            else
-                % NE段 (0 ~ 1)
-                len_north = L_total - s_peak;
-                if len_north > 1e-3
-                    K_val = (s_hit - s_peak) / len_north;
-                else
-                    K_val = 1; 
-                end
-            end
-        end
-        
+        K_val = signedPositionFromArcLength(cData.s_peak, cData.L_total);
+        isPassK = true;
+        propLatK = NaN;
+        propLonK = NaN;
+        isPass_list(global_idx) = isPassK;
         signedPos_list(global_idx) = K_val;
         signedPos_Moor = K_val;
-        
-        % % 绘图时的反算逻辑也需要微调，以匹配新的 K 定义
-        % if ~isempty(t_lat)
-        %      % ... (前面的排序和长度计算不变) ...
-        % 
-        %      % 反算 s_target (用于在图上标点)
-        %      % 因为 K 是分段的，反算也要分段
-        %      if signedPos_Moor <= 0
-        %          % K in [-1, 0]: s = (K + 1) * s_peak? 
-        %          % K = (s - s_p)/s_p => K*s_p = s - s_p => s = s_p(1+K)
-        %          s_target_plot = s_peak_tmp * (1 + signedPos_Moor);
-        %      else
-        %          % K in [0, 1]: K = (s - s_p)/len_north => s = K*len_north + s_p
-        %          s_target_plot = signedPos_Moor * (L_total_tmp - s_peak_tmp) + s_peak_tmp;
-        %      end
-        % 
-        %      % ... (interp1 和 plot 逻辑不变，使用 s_target_plot) ...
-        % end
 
-        % 3. 计算 K_mooring
-
-        plot(rawLon, rawLat, 'b.-'); % 绘制波峰线
-        hold on
-        plot(mooring_lon, mooring_lat, 'ro', 'MarkerFaceColor', 'r'); % 绘制系泊点
-        theta = linspace(0, 2*pi, 360);
-        range_circle = km2deg(30) * ones(size(theta));
-        azimuth_circle = rad2deg(theta);
-        [lat_circle, lon_circle] = reckon(20.816666666666666, 115.76666666666667, range_circle, azimuth_circle);
-        plot(lon_circle, lat_circle, '--', 'LineWidth', 1, 'Color', [255, 0, 0]/255);
-        plot(propLon, propLat, '--');
-
-        % --- 【新增代码】计算并绘制 signedPos 点 ---
-        % 1. 提取有效点
-        valid_mask = ~isnan(rawLat) & ~isnan(rawLon);
-        t_lat = rawLat(valid_mask); 
-        t_lon = rawLon(valid_mask);
-        
-        if ~isempty(t_lat)
-            % 2. 排序 (必须与 reachMooringByTranslation 内部逻辑严格一致)
-            % 使用 lat+lon 综合判断 SW->NE，防止 U 型回转导致误判
-            if (t_lat(1)) > (t_lat(end))
-                t_lat = fliplr(t_lat);
-                t_lon = fliplr(t_lon);
-            end
-            
-            % 3. 【修正】去重 (仅去除相邻重复点，保护拓扑结构)
-            % 千万不要用 unique(...,'rows')，那是会乱序的！
-            d_seg_check = hypot(diff(t_lat), diff(t_lon));
-            keep_mask = [true, d_seg_check > 1e-9]; % 保留距离大于0的点
-            t_lat = t_lat(keep_mask);
-            t_lon = t_lon(keep_mask);
-            
-            % 4. 计算可视化用的累计弧长 (Degree Space)
-            d_seg = hypot(diff(t_lat), diff(t_lon));
-            s_cum = [0, cumsum(d_seg)];
-            L_vis_total = s_cum(end); % 可视化空间的总长
-            
-            % 5. 【核心逻辑】分段反算 s_target
-            % 我们需要利用 analyze_crest_shape 算出的物理比例
-            % s_peak_tmp 和 L_total_tmp 必须在前面已经计算好
-            if exist('s_peak_tmp', 'var') && exist('L_total_tmp', 'var') && L_total_tmp > 0
-                ratio_peak = s_peak_tmp / L_total_tmp;
-            else
-                ratio_peak = 0.5; % 兜底：如果没算曲率，假定在中间
-            end
-            
-            % 将物理空间的峰值比例，映射到可视化空间的弧长上
-            s_vis_peak = ratio_peak * L_vis_total;
-            
-            s_target = 0;
-            if signedPos_Moor <= 0
-                % 西南段 (-1 ~ 0) 反算: 
-                % K = (s - s_p) / s_p  =>  s = (K + 1) * s_p
-                s_target = (signedPos_Moor + 1) * s_vis_peak;
-            else
-                % 东北段 (0 ~ 1) 反算:
-                % K = (s - s_p) / (L - s_p) => s = s_p + K * (L - s_p)
-                s_target = s_vis_peak + signedPos_Moor * (L_vis_total - s_vis_peak);
-            end
-            
-            % 边界保护
-            s_target = max(0, min(s_target, L_vis_total));
-            
-            % 6. 插值得到经纬度
-            p_lat = interp1(s_cum, t_lat, s_target, 'linear');
-            p_lon = interp1(s_cum, t_lon, s_target, 'linear');
-            
-            % 7. 绘制该点 (绿色五角星)
-            plot(p_lon, p_lat, 'pentagram', ...
-                 'MarkerSize', 12, ...
-                 'MarkerEdgeColor', 'k', ...
-                 'MarkerFaceColor', 'g', ...
-                 'LineWidth', 1.5);
-             
-            % 文字标签
-            text(p_lon, p_lat, sprintf('  K=%.2f', signedPos_Moor), ...
-                 'Color', 'blue', 'FontSize', 10, 'FontWeight', 'bold');
-        end
-
-        fprintf("isPass: %d, Pos: %d\n", isPass, signedPos_Moor);
-        ;
-        
-        
-        if isPass
-            s_hit = (signedPos_Moor + 1) / 2 * cData.L_total;
-            if s_hit <= cData.s_peak
-                K = (s_hit - cData.s_peak) / cData.s_peak; 
-            else
-                len_north = max(cData.L_total - cData.s_peak, 1e-3);
-                K = (s_hit - cData.s_peak) / len_north; 
-            end
-            out_K_mooring(k) = K;
-        else
-            out_K_mooring(k) = NaN; 
+        if shouldPlotDebugCrest(DEBUG, global_idx)
+            plotCrestKDebug(rawLat, rawLon, cData, mooring_lat, mooring_lon, ...
+                signedPos_Moor, propLatK, propLonK);
+            fprintf("isPass: %d, Pos: %d\n", isPassK, signedPos_Moor);
         end
 
         crestDir_arr(global_idx) = cDir;
         crest_sensing_time{global_idx} = shp_time;
 
-        % 2. 几何分析
-        [resLat, resLon, peakLat, peakLon, s_peak, L_total] = analyze_crest_shape(rawLat, rawLon, resample_res);
-        cData.resLat = resLat; cData.resLon = resLon;
-        cData.peakLat = peakLat; cData.peakLon = peakLon;
-        cData.s_peak = s_peak; cData.L_total = L_total; 
+        % Keep the original flow: refresh cData before candidate matching.
+        cData = buildCrestData(rawLat, rawLon, resample_res);
         temp_crest_data{global_idx} = cData;
 
         for j = 1:length(current_mooring_indices)
@@ -413,3 +261,74 @@ save(output_mat_name, 'mode', 'mooring_time', 'speed_diff', 'dir_diff', ...
 % writetable(T_export, output_xlsx_name);
 % fprintf('结果已保存至 %s\n', output_xlsx_name);
 
+%% 辅助函数
+function cData = buildCrestData(rawLat, rawLon, resample_res)
+    [resLat, resLon, peakLat, peakLon, s_peak, L_total] = ...
+        analyze_crest_shape(rawLat, rawLon, resample_res);
+    s = crestArcLengthMeters(resLat, resLon);
+
+    cData.resLat = resLat;
+    cData.resLon = resLon;
+    cData.peakLat = peakLat;
+    cData.peakLon = peakLon;
+    cData.s = s;
+    cData.s_peak = s_peak;
+    cData.L_total = L_total;
+end
+
+
+function s = crestArcLengthMeters(lat, lon)
+    good = isfinite(lat) & isfinite(lon);
+    lat = lat(good);
+    lon = lon(good);
+    if numel(lat) < 2
+        s = zeros(size(lat));
+        return;
+    end
+    R_earth = 6371000;
+    lat0 = mean(lat);
+    lon0 = mean(lon);
+    x = R_earth * cosd(lat0) .* deg2rad(lon - lon0);
+    y = R_earth * deg2rad(lat - lat0);
+    s = [0; cumsum(hypot(diff(x), diff(y)))];
+end
+
+function K = signedPositionFromArcLength(s_hit_meters, L_total)
+    K = 2 * s_hit_meters / L_total - 1;
+end
+
+function tf = shouldPlotDebugCrest(DEBUG, global_idx)
+    tf = isfield(DEBUG, 'plotKPoint') && DEBUG.plotKPoint;
+    if tf && isfield(DEBUG, 'targetCrestIdx') && ~isempty(DEBUG.targetCrestIdx)
+        tf = any(DEBUG.targetCrestIdx == global_idx);
+    end
+end
+
+function plotCrestKDebug(rawLat, rawLon, cData, mooring_lat, mooring_lon, signedPos_Moor, propLat, propLon)
+    figure; hold on; axis equal;
+    plot(rawLon, rawLat, 'k-', 'LineWidth', 1);
+    plot(cData.resLon, cData.resLat, 'b.');
+    plot(cData.peakLon, cData.peakLat, 'ro', 'MarkerFaceColor', 'r');
+    if ~isnan(propLat) && ~isnan(propLon)
+        plot(propLon, propLat, '--', 'LineWidth', 1.2);
+    end
+    plot(mooring_lon, mooring_lat, 'gp', 'MarkerFaceColor', 'g', 'MarkerSize', 12);
+
+    [ptLon, ptLat] = pointFromSignedPosition(cData, signedPos_Moor);
+    if ~isnan(ptLat) && ~isnan(ptLon)
+        plot(ptLon, ptLat, 'mo', 'MarkerFaceColor', 'm', 'MarkerSize', 8);
+    end
+    title('Crest geometry and mooring signed position');
+    legend({'raw', 'resampled', 'peak', 'translation', 'mooring', 'K point'}, 'Location', 'best');
+end
+
+function [ptLon, ptLat] = pointFromSignedPosition(cData, signed_pos)
+    ptLon = NaN;
+    ptLat = NaN;
+    if isnan(signed_pos) || isempty(cData.s) || cData.L_total == 0
+        return;
+    end
+    s_query = (signed_pos + 1) / 2 * cData.L_total;
+    ptLon = interp1(cData.s, cData.resLon, s_query, 'linear', 'extrap');
+    ptLat = interp1(cData.s, cData.resLat, s_query, 'linear', 'extrap');
+end
