@@ -1,0 +1,238 @@
+<title>南海内孤立波波速空间外推：证据、公式与可执行验证方案</title>
+
+<callout emoji="🎯" background-color="light-blue" border-color="blue">
+  <p><b>核心判断</b></p>
+  <ol>
+    <li seq="auto"><b>不存在“一个点真值即可可靠外推南海全域”的已验证经验公式</b>：现有南海经验模型依赖多条卫星波迹或多站到时；单点观测最多校准一个预先选定的标量。</li>
+    <li seq="auto"><b>可行基线是“局地理论速度场×低维校准”</b>：逐点使用水深、层化、背景流、模态和振幅计算速度，再用单点真值校准一个物理参数、比例因子或偏置。</li>
+    <li seq="auto"><b>空间变化不可由单点系数替代</b>：WISE/VANS 同一阵列给出深盆段 3.23±0.31 m s⁻¹、陆坡段 2.22±0.18 m s⁻¹，且相对线性相速的偏离随区段、波型和流场变化。</li>
+    <li seq="auto"><b>外推必须通过独立站点或事件验收</b>：至少报告相速与到时误差、偏差和预测区间覆盖率；没有留出数据时只能交付条件性预测区间，不能称为全场真值。</li>
+  </ol>
+</callout>
+
+<h2>一、定量结果：单点校准只能修正基准，空间变化仍由环境控制</h2>
+<blockquote><p><b>本节要点</b>：同一 WISE/VANS 观测体系已显示深盆至陆坡存在约 1.01 m s⁻¹ 的段平均速度差。该差异超过把全路径视为一个常数速度所能表达的范围。</p></blockquote>
+
+<h3>1.1 南海典型波速及空间变化范围</h3>
+<p>现场观测给出的最可靠定量锚点来自 2005—2006 年 WISE/VANS 系泊阵列。论文明确匹配的波峰在深海盆 B2→B1 段平均传播速度为 <b>3.23±0.31 m s⁻¹</b>，在 B1→S7 陆坡段为 <b>2.22±0.18 m s⁻¹</b>；两者是均值±标准差，不能解释为每一空间点的连续速度场。<a href="https://npg.copernicus.org/articles/17/481/2010/npg-17-481-2010.pdf#page=9">[1]</a>（现场观测；Ramp、Yang 与 Bahr，2010，DOI 10.5194/npg-17-481-2010，PDF 第9页，3.2节第1—2段，图5）</p>
+<table>
+  <colgroup><col width="150"/><col width="150"/><col width="145"/><col width="175"/><col width="200"/></colgroup>
+  <thead><tr><th align="center" background-color="light-gray">证据/区段</th><th align="center" background-color="light-gray">速度</th><th align="center" background-color="light-gray">空间尺度</th><th align="center" background-color="light-gray">证据等级</th><th align="left" background-color="light-gray">边界</th></tr></thead>
+  <tbody>
+    <tr><td align="center">B2→B1 深盆</td><td align="center">3.23±0.31 m s⁻¹</td><td align="center">站间波峰匹配</td><td align="center">现场观测</td><td align="left">2005—2006 年阵列统计；并非连续空间场</td></tr>
+    <tr><td align="center">B1→S7 陆坡</td><td align="center">2.22±0.18 m s⁻¹</td><td align="center">136 km</td><td align="center">现场观测</td><td align="left">B1 约2465 m至S7 350 m；事件匹配</td></tr>
+    <tr><td align="center">对应线性一模态</td><td align="center">深盆2.60–2.77；陆坡1.91–2.09 m s⁻¹</td><td align="center">站间加权</td><td align="center">理论推导</td><td align="left">由5次CTD层结解本征问题，不是直接测速</td></tr>
+    <tr><td align="center">冬季二模态算例</td><td align="center">数值0.67；线性0.56；修正0.65 m s⁻¹</td><td align="center">90 km通道</td><td align="center">数值模拟+理论</td><td align="left">21.625°N、12月WOA2013层化；不可迁移为一模态经验值</td></tr>
+  </tbody>
+</table>
+<p align="center"><i>表1：不同区段、模态与证据类型的速度不可直接拼接（来源：<a href="https://doi.org/10.5194/npg-17-481-2010">[1]</a>、<a href="https://arxiv.org/abs/1808.02248">[5]</a>）</i></p>
+
+<h3>1.2 从吕宋海峡到陆坡陆架的速度变化</h3>
+<p>按上述段平均值作二次计算，深盆至陆坡的平均速度下降量为 1.01 m s⁻¹，约为深盆值的 31.3%；这只比较两段统计量，不生成两站之间的连续插值。B1→S7 的 136 km 典型事件旅行时约 15 h，对应约 2.5 m s⁻¹；该值属于 2005 年11月事件簇，不能与 ASIAEX 2001、其他卫星影像或 2015 年理想化模拟连接成一条轨迹。<a href="https://npg.copernicus.org/articles/17/481/2010/npg-17-481-2010.pdf#page=9">[1]</a>（现场观测；PDF 第9页，3.1节末段、3.2节第1—2段，图5）</p>
+<p>同文计算的线性一模态速度为深盆 2.60–2.77 m s⁻¹、陆坡 1.91–2.09 m s⁻¹；实测速度分别快 11%–20% 与 9%–23%。这说明有限振幅、背景流及模型结构误差会改变线性基准，而且修正幅度并非全程恒定。<a href="https://npg.copernicus.org/articles/17/481/2010/npg-17-481-2010.pdf#page=10">[1]</a>（观测与同文理论计算；PDF 第10页，3.2节图5后两段）</p>
+
+<hr/>
+<h2>二、证据与精确引用：多源观测支持速度随水深和层化系统变化</h2>
+<blockquote><p><b>本节要点</b>：现场阵列、卫星波纹、理论模态和数值模拟共同支持环境依赖性，但只有同一事件的多站波峰匹配可直接构成沿程测速证据。</p></blockquote>
+
+<h3>2.1 现场观测与遥感证据</h3>
+<table>
+  <colgroup><col width="125"/><col width="195"/><col width="180"/><col width="160"/><col width="160"/></colgroup>
+  <thead><tr><th align="center" background-color="light-gray">证据类型</th><th align="left" background-color="light-gray">直接支持</th><th align="left" background-color="light-gray">代表材料</th><th align="center" background-color="light-gray">可用于波速外推</th><th align="left" background-color="light-gray">主要限制</th></tr></thead>
+  <tbody>
+    <tr><td align="center">现场观测</td><td align="left">同一波峰的站间到时与段平均速度</td><td align="left">WISE/VANS B2、B1、S7</td><td align="center">可作为验证主证据</td><td align="left">站点稀疏；事件匹配有不确定性</td></tr>
+    <tr><td align="center">卫星遥感</td><td align="left">波峰线位置、传播方向与极性</td><td align="left">吕宋海峡以西向西北偏西延伸</td><td align="center">需多时相反演</td><td align="left">单幅影像通常不直接给速度</td></tr>
+    <tr><td align="center">理论推导</td><td align="left">给定水深和层化下的局地模态速度</td><td align="left">Sturm–Liouville本征问题</td><td align="center">可构造先验场</td><td align="left">受刚盖、静力、无剪切等假设限制</td></tr>
+    <tr><td align="center">数值模拟</td><td align="left">浅化、裂变、模态转换与三维折射</td><td align="left">二维/三维非静力模式</td><td align="center">可作高保真正演</td><td align="left">依赖初始波、边界、耗散与网格</td></tr>
+  </tbody>
+</table>
+<p align="center"><i>表2：证据分级决定可回答的问题；遥感迹线不能替代连续现场测速</i></p>
+<p>卫星雷达与海色影像显示波纹由吕宋海峡以西向西北偏西传播，并在约 120–150 m 水深附近发生极性转换；该信息属于表面波纹和空间形态证据，不能单独视为同一波的连续测速。当前可核材料是 Ramp 等对既有遥感研究的综述，原始影像日期、图号与波峰匹配仍需回到 Hsu 与 Liu 原文核验。<a href="https://npg.copernicus.org/articles/17/481/2010/npg-17-481-2010.pdf#page=2">[1]</a>（卫星遥感的二手综述；PDF 第2页，引言第2页相关段落）</p>
+
+<h3>2.2 理论、模拟与观测的一致及冲突</h3>
+<p>一致部分是：速度随层化和地形区段变化，有限振幅通常使传播快于线性模态速度。WISE/VANS 观测相对线性值快 9%–23%；北部南海冬季二模态数值试验中，0.56 m s⁻¹ 的线性值加入非线性修正后为 0.65 m s⁻¹，与 0.67 m s⁻¹ 的模拟平均值接近。<a href="https://arxiv.org/abs/1808.02248#page=11">[5]</a>（数值模拟与理论；Liang 与 Li，2019，DOI 10.1007/s10236-019-01246-6，预印本4.1节、图4后第2段、图5前）</p>
+<p>冲突部分是修正方向并非只由振幅决定。Alford 等对 14 个波、10 个锚系、约 560 km 路径的分析指出：深盆 B 波约比线性一模态半日内潮快 5%，A 波又比 B 波快 5%–10%；上陆坡后 B 波反而比 A 波快 8%–12%，Taylor–Goldstein 诊断将其归因于日内潮调制背景流。<a href="https://doi.org/10.1175/2010JPO4388.1">[3]</a>（现场观测+理论诊断；Alford 等，2010，DOI 10.1175/2010JPO4388.1，Journal of Physical Oceanography 40(6):1338–1355，摘要中后段）</p>
+
+<hr/>
+<h2>三、方法与公式：可用“局地理论速度×单点校准因子”沿程估计</h2>
+<blockquote><p><b>本节要点</b>：公式应先建立空间变化的物理基准，再让单点真值校准一个低维误差方向。直接把观测点速度常数化或把一个比值无条件乘遍全域，缺少南海证据支持。</p></blockquote>
+
+<h3>3.1 两层、连续层化与非线性相速公式</h3>
+<p><b>两层长波基准：</b></p>
+<p align="center"><latex>c_0^2=\frac{g' h_1 h_2}{h_1+h_2},\qquad g'=g\frac{\rho_2-\rho_1}{\rho_0}</latex></p>
+<p>变量与单位：<latex>c_0</latex> 为线性相速（m s⁻¹）；<latex>h_1,h_2</latex> 为上下层厚度（m）；<latex>g'</latex> 为约化重力（m s⁻²）；<latex>g</latex> 为重力加速度（m s⁻²）；<latex>\rho_1,\rho_2,\rho_0</latex> 为密度（kg m⁻³）。物理意义：水深分配和密度跃变共同决定局地基准速度。适用条件：两层、刚盖、无背景流、静力、长波和 Boussinesq 近似；自由表面、有限波长、旋转与剪切会改变结果。<a href="https://doi.org/10.1146/annurev.fluid.38.050304.092129">[6]</a>（理论综述；Helfrich 与 Melville，2006，DOI 10.1146/annurev.fluid.38.050304.092129，Annual Review of Fluid Mechanics 38:395–425，长内孤立波理论部分）</p>
+<p><b>连续层化模态：</b></p>
+<p align="center"><latex>\frac{d^2\phi_n}{dz^2}+\frac{N^2(z)}{c_n^2}\phi_n=0,\qquad \phi_n(0)=\phi_n(-H)=0</latex></p>
+<p>变量与单位：<latex>\phi_n</latex> 为第 <latex>n</latex> 模态垂向位移函数（按位移归一化时为 m）；<latex>z,H</latex> 为垂向坐标与总水深（m）；<latex>N</latex> 为浮力频率（s⁻¹）；本征值 <latex>c_n</latex> 为线性相速（m s⁻¹）。物理意义：每个水平位置都由本地密度剖面和水深决定模态速度。适用条件：静止背景、Boussinesq、刚盖、非旋转、静力长波；若存在显著剪切，应求解含 <latex>U(z)</latex> 的 Taylor–Goldstein 型本征问题。<a href="https://arxiv.org/abs/1808.02248#page=5">[5]</a>（理论推导；Liang 与 Li，2019，DOI 10.1007/s10236-019-01246-6，预印本2节、式(4)及式前一段）</p>
+<p><b>KdV 弱非线性修正：</b></p>
+<p align="center"><latex>\eta_t+c_0\eta_x+\alpha\eta\eta_x+\beta\eta_{xxx}=0,\qquad V=c_0+\frac{\alpha A}{3}</latex></p>
+<p>变量与单位：<latex>\eta,A</latex> 为界面位移与孤立波振幅（m）；<latex>x</latex> 为沿程距离（m）；<latex>t</latex> 为时间（s）；<latex>V,c_0</latex> 为非线性与线性相速（m s⁻¹）；<latex>\alpha</latex> 为二次非线性系数（s⁻¹）；<latex>\beta</latex> 为色散系数（m³ s⁻¹）。适用条件：单向、单模态、弱非线性、弱色散和长波，通常要求 <latex>\epsilon=A/H\ll1</latex>、<latex>\mu=(H/L)^2\ll1</latex> 且同阶；近 <latex>\alpha=0</latex>、强剪切、破碎或强模态转换时越界。<a href="https://doi.org/10.1146/annurev.fluid.38.050304.092129">[6]</a></p>
+<p><b>Gardner/eKdV 中等非线性修正：</b></p>
+<p align="center"><latex>V-c_0=\frac{\alpha A}{3}+\frac{\alpha_1A^2}{6}</latex></p>
+<p>变量与单位：<latex>\alpha_1</latex> 为三次非线性系数（m⁻¹ s⁻¹），其余同上。物理意义：当二次非线性系数接近零时，振幅平方项仍可改变波速。适用条件：长波、单向、弱至中等非线性；该式不自动包含旋转、耗散、二维折射、剪切和破碎。<a href="https://doi.org/10.5194/npg-9-221-2002">[7]</a>（理论推导；Grimshaw、Pelinovsky、Poloukhina 与 Talipova，2002，DOI 10.5194/npg-9-221-2002，Nonlinear Processes in Geophysics 9:221–235）</p>
+
+<h3>3.2 单点真值的比例、偏差与贝叶斯校准</h3>
+<p><b>二次推导：</b>若局地理论场为 <latex>c_t(\mathbf x)</latex>，单点观测位于 <latex>\mathbf x_0</latex>、速度为 <latex>c_o</latex>，则一个标量观测可唯一确定一个预先选定的校准量：</p>
+<p align="center"><latex>a=\frac{c_o}{c_t(\mathbf x_0)},\qquad c_{\rm pred}(\mathbf x)=a\,c_t(\mathbf x)</latex></p>
+<p>变量与单位：<latex>a</latex> 为无量纲全局比例；<latex>c_o,c_t,c_{\rm pred}</latex> 均为 m s⁻¹；<latex>\mathbf x,\mathbf x_0</latex> 为位置（m、km或经纬度坐标，但同一计算中必须统一）。适用条件：<latex>c_t(\mathbf x_0)\ne0</latex>，且未建模误差在全路径共享同一比例。该条件尚未被南海观测证明，因而只能作为基线。</p>
+<p align="center"><latex>b=c_o-c_t(\mathbf x_0),\qquad c_{\rm pred}(\mathbf x)=c_t(\mathbf x)+b</latex></p>
+<p>变量与单位：<latex>b</latex> 为速度偏置（m s⁻¹）。适用条件：全路径共享同一加性偏差。低速陆坡区中，同一 <latex>b</latex> 会形成更大的相对误差。</p>
+<table>
+  <colgroup><col width="150"/><col width="175"/><col width="190"/><col width="305"/></colgroup>
+  <thead><tr><th align="center" background-color="light-gray">校准方式</th><th align="center" background-color="light-gray">单点可辨识量</th><th align="center" background-color="light-gray">输出</th><th align="left" background-color="light-gray">使用条件与判断</th></tr></thead>
+  <tbody>
+    <tr><td align="center">物理参数</td><td align="center">1个有效参数组合</td><td align="center">空间非均匀修正</td><td align="left">优先；参数必须有物理先验，且局地灵敏度显著</td></tr>
+    <tr><td align="center">乘性比例</td><td align="center">1个无量纲因子</td><td align="center">全场同比例</td><td align="left">探索性基线；需独立站验证残差无空间结构</td></tr>
+    <tr><td align="center">加性偏置</td><td align="center">1个速度偏置</td><td align="center">全场同增量</td><td align="left">探索性基线；低速区相对误差放大</td></tr>
+    <tr><td align="center">仿射a、b</td><td align="center">2个参数</td><td align="center">乘加联合</td><td align="left">单点不可辨识；至少需要第二个独立约束</td></tr>
+    <tr><td align="center">贝叶斯低维参数</td><td align="center">由先验与数据共同约束</td><td align="center">后验预测区间</td><td align="left">推荐用于多站/多事件；须区分参数误差与结构差异</td></tr>
+  </tbody>
+</table>
+<p align="center"><i>表3：单点观测只能约束一个标量误差方向；“可算”不等于“已验证”</i></p>
+<p><b>文献结论：</b>Jackson 的北南海经验传播模型使用多条、多时相卫星内波签名拟合相速—水深模型，再计算传播路径与走时；报告误差为水深大于 1000 m 时 ±1.32 h（1σ），全观测水深范围 ±2.55 h（1σ）。该模型并非单点标定。<a href="https://doi.org/10.1175/2009JTECHO638.1">[4]</a>（经验模型；Jackson，2009，DOI 10.1175/2009JTECHO638.1，Journal of Atmospheric and Oceanic Technology 26(10):2243–2255，摘要第2—8句；正文函数、式号和图号本轮未获全文核验）</p>
+
+<hr/>
+<h2>四、因果机制：地形与层化决定主趋势，振幅和背景流形成修正</h2>
+<blockquote><p><b>本节要点</b>：波速空间外推的因果链从水深和密度剖面开始，继而受有限振幅、背景流和二维路径修正；初始条件与观测误差分别影响波身份和校准可信度。</p></blockquote>
+
+<h3>4.1 水深与密度跃层控制</h3>
+<html5-block path="@assets/visual_01.html"></html5-block>
+<p align="center"><i>图1：局地环境决定线性模态速度，非线性与流场在其上形成区段性修正（依据：<a href="https://doi.org/10.5194/npg-17-481-2010">[1]</a>、<a href="https://doi.org/10.1007/s10236-019-01246-6">[5]</a>）</i></p>
+<p>水深改变边界条件，密度跃层的强度、深度和厚度改变 <latex>N^2(z)</latex> 与模态形状，因此 <latex>c_n</latex> 必须沿路径逐格重算。WISE/VANS 的季节观测显示，2005 年5月至11月速度随层结增强而升高；冬季混合层由夏季不足 50 m 加深至超过 100 m、海表温度季节变化约 8°C，并伴随 2005 年12月至2006年2月几乎无波。作者将其解释为深混合层和弱层结抑制内波。<a href="https://npg.copernicus.org/articles/17/481/2010/npg-17-481-2010.pdf#page=11">[1]</a>（现场观测及作者归因；PDF 第10—11页，3.2节，图6—8）</p>
+
+<h3>4.2 非线性、背景流、潮相与二维折射</h3>
+<p>有限振幅修正可量化但不稳定为全域常数。Ramp 等在陆坡段得到 <latex>C_p=211+0.128\eta</latex>（<latex>C_p</latex> 单位 cm s⁻¹，<latex>\eta</latex> 单位 m）；在该阵列和层结下，120 m 波比 40 m 波约快 5%，而深盆段的速度—振幅关系近乎平坦。<a href="https://npg.copernicus.org/articles/17/481/2010/npg-17-481-2010.pdf#page=10">[1]</a>（现场观测回归；PDF 第10页，3.2节，图5后相关段落）</p>
+<p>公式变量与边界：<latex>C_p</latex> 是论文波峰传播速度，<latex>\eta</latex> 是指定等温面的位移；截距和斜率只适用于 B1/S7 阵列、所用等温面、2005—2006 年层结和波样本。该式是“局地事件经验回归”，并非南海全域经验公式。</p>
+<p>均匀背景流的第一阶地速可表示为：</p>
+<p align="center"><latex>c_{\rm eff}=c_{\rm int}+\mathbf U\cdot\hat{\mathbf s}</latex></p>
+<p>变量与单位：<latex>c_{\rm eff}</latex> 为沿射线的地速（m s⁻¹）；<latex>c_{\rm int}</latex> 为内禀相速或群速（m s⁻¹，须与目标观测量一致）；<latex>\mathbf U</latex> 为背景流矢量（m s⁻¹）；<latex>\hat{\mathbf s}</latex> 为无量纲传播方向单位向量。适用条件：背景流近似均匀、无临界层。存在垂向剪切时应使用 Taylor–Goldstein 本征问题，不能直接加表层流速。<a href="https://doi.org/10.1175/2010JPO4388.1">[3]</a></p>
+<p>二维相速梯度还会折射波前。三维非线性模拟显示，局部海丘或洼地可造成波前凹凸、横向聚焦或散焦并改变破碎位置；因此仅沿预设直线积分不能覆盖显著横向地形变化。<a href="https://doi.org/10.1029/2007JC004107">[11]</a>（数值模拟；Vlasenko 与 Stashchuk，2007，DOI 10.1029/2007JC004107，Journal of Geophysical Research: Oceans 112(C11)，摘要）</p>
+
+<hr/>
+<h2>五、适用边界：跨陆坡、变模态和波群演化会破坏简单外推</h2>
+<blockquote><p><b>本节要点</b>：只有确认同一波、同一模态、同一速度定义和可追踪路径，单点校准才有物理意义；跨陆坡浅化、裂变和模态转换会使这些条件失效。</p></blockquote>
+
+<h3>5.1 同一波识别与路径假设</h3>
+<p>同一波识别至少需要源时刻或相位、波峰线、模态、极性、振幅和传播方向相容。WISE/VANS 中 A 波和 B 波具有不同到达规律：A 波多为日周期、按振幅排序的波包；B 波每天约晚 1 h，深盆常较弱而到上陆坡才形成明显非线性波。A/B 是到达型态，不等同于模态1/模态2。<a href="https://npg.copernicus.org/articles/17/481/2010/npg-17-481-2010.pdf#page=1">[1]</a>（现场观测；摘要及PDF第9—11页、图4、图6—7）</p>
+<p>速度误差会放大为源潮相误判。Ramp 等指出，对约 475 km 的 S7—吕宋路径，约 3%（约 0.10 m s⁻¹）的速度误差即可使反推生成潮相偏移 6 h。<a href="https://npg.copernicus.org/articles/17/481/2010/npg-17-481-2010.pdf#page=2">[1]</a>（方法学敏感性分析；PDF 第2页，引言相关段落）</p>
+<p>给定速度场时，首达时间可用程函方程和沿射线积分表达：</p>
+<p align="center"><latex>|\nabla T(\mathbf x)|=\frac{1}{c_{\rm eff}(\mathbf x,\hat{\mathbf s})},\qquad T=\int_{\Gamma}\frac{ds}{c_{\rm eff}}</latex></p>
+<p>变量与单位：<latex>T</latex> 为旅行时（s或h，输出时统一）；<latex>\mathbf x</latex> 为水平位置（m或km）；<latex>\Gamma</latex> 为传播射线；<latex>ds</latex> 为路径弧长（m）；<latex>c_{\rm eff}</latex> 为沿射线有效速度（m s⁻¹）。适用条件：局地速度场定义明确、首达路径可辨识、波包可用射线近似；强破碎、强模态转换和显著多路径时应升级到全波或非静力正演。</p>
+
+<h3>5.2 经验式、KdV/eKdV、DJL与数值模式的边界</h3>
+<table>
+  <colgroup><col width="135"/><col width="180"/><col width="190"/><col width="315"/></colgroup>
+  <thead><tr><th align="center" background-color="light-gray">模型</th><th align="left" background-color="light-gray">适合回答</th><th align="left" background-color="light-gray">必需输入</th><th align="left" background-color="light-gray">失效边界</th></tr></thead>
+  <tbody>
+    <tr><td align="center">局地经验回归</td><td align="left">同阵列、同层结的快速估计</td><td align="left">经验自变量与训练范围</td><td align="left">跨季节、跨区段、跨模态和训练范围外不可直接用</td></tr>
+    <tr><td align="center">线性模态</td><td align="left">局地基准相速</td><td align="left">水深、密度剖面、模态</td><td align="left">不含有限振幅、强剪切、耗散与模态交换</td></tr>
+    <tr><td align="center">KdV</td><td align="left">弱非线性速度和波宽</td><td align="left">c₀、α、β、振幅</td><td align="left">α接近零、大振幅、破碎、强旋转或强剪切</td></tr>
+    <tr><td align="center">Gardner/eKdV</td><td align="left">近临界二次非线性</td><td align="left">增加三次非线性系数</td><td align="left">仍不含二维折射、耗散和一般模态耦合</td></tr>
+    <tr><td align="center">DJL</td><td align="left">二维稳态有限振幅波速与结构</td><td align="left">层化、波能量/振幅、边界</td><td align="left">不描述生成、沿程时变、显著旋转和一般三维传播</td></tr>
+    <tr><td align="center">非静力模式</td><td align="left">浅化、裂变、破碎与多模态</td><td align="left">高分辨率地形、剖面、初边值和耗散</td><td align="left">计算昂贵；结果依赖初始化、网格与参数化</td></tr>
+  </tbody>
+</table>
+<p align="center"><i>表4：模型应随非线性、剪切和空间复杂度升级（来源：<a href="https://doi.org/10.1146/annurev.fluid.38.050304.092129">[6]</a>、<a href="https://doi.org/10.5194/npg-9-221-2002">[7]</a>、<a href="https://doi.org/10.1017/S002211200100636X">[9]</a>）</i></p>
+<p>Cai 与 Xie 的北南海传播模型属于二维 regularized long-wave 数值模型，需要给定初始孤子、源点、时滞、振幅与地形；其模拟包含极性反转、波峰线改变、合并、岛屿反射、绕射与再连接。它不能简化为一个点真值驱动的封闭经验公式。<a href="https://doi.org/10.1029/2010JC006341">[10]</a>（数值模拟；Cai 与 Xie，2010，DOI 10.1029/2010JC006341，Journal of Geophysical Research: Oceans 115(C12)，摘要）</p>
+
+<hr/>
+<h2>六、数据或研究局限：现有文献不足以支持单一南海全域经验式</h2>
+<blockquote><p><b>本节要点</b>：关键缺口集中在陆架实测、多时相同期环境场、单点观测定义和独立验证数据。证据不足之处不作全域定量承诺。</p></blockquote>
+
+<h3>6.1 观测覆盖与事件样本偏差</h3>
+<callout emoji="🔍" background-color="gray" border-color="gray">
+  <p><b>待验证与口径说明</b>（现有证据不足，不作精确结论）：</p>
+  <ul>
+    <li>ASIAEX 2001 单案例的逐波波速、路径坐标、卫星图号与PDF页码：全文受限，尚未完成原文核验。</li>
+    <li>Zhao 与 Alford 2006 的文章号、图号和PDF页码：当前定量结论仅核到摘要；需取得原PDF后补录。<a href="https://doi.org/10.1029/2006JC003644">[2]</a></li>
+    <li>水深低于200 m陆架的独立现场波速：本轮可核阵列终点S7水深为350 m；二手线索中的约1.5 m s⁻¹未纳入结论。</li>
+    <li>Jackson 2009 的具体相速—水深函数、式号和图号：摘要足以确认其使用多波迹反演，但不足以复现公式。<a href="https://doi.org/10.1175/2009JTECHO638.1">[4]</a></li>
+    <li>目标单点观测的时间窗、测量误差、模态、振幅及“相速/群速/波峰速度”定义尚未提供。</li>
+  </ul>
+</callout>
+<p>样本偏差的直接后果是：不能把 Hsu 与 Liu 2000 的卫星迹线、ASIAEX 2001 个例、Zhao 与 Alford 的两系泊时滞、WISE/VANS 2005—2006 波峰追踪和 2015 年理想化数值模拟拼接为同一事件。它们可共同构成跨方法规律，但不能形成一条连续观测曲线。</p>
+
+<h3>6.2 参数不可得与误差传播</h3>
+<p>若同期温盐和流速剖面缺失，使用气候态场会把季节、天气尺度和中尺度异常折叠为结构误差。南海高保真模拟也需要对表层缺测流速外推、深层流置零、背景场恒定等假设作显式处理；这些假设应进入情景消融，不能只作为独立随机噪声。<a href="https://arxiv.org/abs/2502.01607">[14]</a>（数值模拟输入处理；2025年预印本，2b—2c节、图2；论文题名和期刊页码本轮材料未完整提供）</p>
+<p><b>二次推导的一阶误差传播：</b></p>
+<p align="center"><latex>\Sigma_y\approx J\Sigma_xJ^{\mathsf T}+\Sigma_{\rm obs}+\Sigma_{\rm disc}</latex></p>
+<p>变量与单位：<latex>\Sigma_y</latex> 为输出协方差；<latex>J=\partial y/\partial x</latex> 为灵敏度矩阵；<latex>\Sigma_x</latex> 为地形、层化、流场、振幅和参数协方差；<latex>\Sigma_{\rm obs}</latex> 为观测误差协方差；<latex>\Sigma_{\rm disc}</latex> 为离散化误差协方差。各项单位随输出而定：若 <latex>y</latex> 为速度，则协方差单位为 m² s⁻²；若为到时，则为 s²。适用条件：局地线性化有效、误差二阶矩有限；折射导致路径显著改变或后验明显非高斯时应用联合Monte Carlo或集合模拟。</p>
+<p align="center"><latex>\delta T\approx-\int_{\Gamma}\frac{\delta c_{\rm eff}}{c_{\rm eff}^2}\,ds</latex></p>
+<p>变量与单位：<latex>\delta T</latex> 为到时扰动（s）；<latex>\delta c_{\rm eff}</latex> 为有效速度扰动（m s⁻¹）；<latex>ds</latex> 为路径长度（m）。物理意义：低速区对同等速度误差更敏感。适用条件：射线路径近似固定、速度扰动较小；路径随参数明显偏折时需同时重算射线。</p>
+
+<hr/>
+<h2>七、可执行验证方案：沿波射线逐点重算并用多站观测检验</h2>
+<blockquote><p><b>本节要点</b>：最小可执行产品应把数据、公式、校准自由度、验证切分和失败升级条件全部固定下来，输出沿程速度与到时的预测区间。</p></blockquote>
+
+<h3>7.1 输入数据与计算流水线</h3>
+<html5-block path="@assets/visual_02.html"></html5-block>
+<p align="center"><i>图2：从环境场到留出验证的机器可执行流程（方法依据：<a href="https://doi.org/10.1007/s10236-019-01246-6">[5]</a>、<a href="https://doi.org/10.1175/2010JPO4388.1">[3]</a>）</i></p>
+<ol>
+  <li seq="auto"><b>输入。</b>地形/水深栅格（m）、同期温盐与密度剖面（°C、g kg⁻¹、kg m⁻³）、背景流矢量剖面（m s⁻¹）、源时刻（UTC）、源位置、模态、振幅（m）或可用势能（J m⁻¹）、单点速度/到时及仪器误差。</li>
+  <li seq="auto"><b>清洗。</b>统一UTC和坐标基准；温盐按TEOS-10转密度；剔除静力不稳定毛刺或标记后进行保守平滑；所有插值保留原始掩膜与不确定度。</li>
+  <li seq="auto"><b>特征提取。</b>计算 <latex>N^2(z)</latex>、混合层深度、跃层深度/强度/厚度、底坡、沿路径流速投影、波幅、模态和波峰线方向。</li>
+  <li seq="auto"><b>匹配。</b>按源相位、到时窗、波峰线、模态、极性、振幅顺序匹配同一波；不满足任一硬条件的事件不进入校准集。</li>
+  <li seq="auto"><b>计算。</b>逐格解模态本征问题得到 <latex>c_n</latex>；根据振幅选线性、KdV、Gardner或DJL修正；加入背景流；构建速度场后用直线积分或FMM/射线求到时。</li>
+  <li seq="auto"><b>单点校准。</b>预先只开放一个参数：物理参数、比例 <latex>a</latex> 或偏置 <latex>b</latex> 三选一；不得用一个观测同时拟合乘加项及多个环境参数。</li>
+  <li seq="auto"><b>验证。</b>按完整站点或完整波事件留出；同一波列的逐时刻样本不得随机拆分到训练集和验证集。</li>
+  <li seq="auto"><b>误差评估。</b>联合采样环境场、观测误差和校准参数；输出每格速度中位数及50%/90%预测区间、每条路径到时分布、误差来源分解。</li>
+  <li seq="auto"><b>输出与升级。</b>输出NetCDF/GeoTIFF速度场、射线GeoJSON、事件级CSV指标和配置清单；若独立验证失败或发生破碎/模态转换，升级到耦合模态或二维/三维非静力模式。</li>
+</ol>
+
+<h3>7.2 验收指标与消融实验</h3>
+<p><b>以下阈值属于探索性建议，不是文献给出的南海通用标准。</b>建议在计算前预注册，以避免看结果后调整门槛。</p>
+<table>
+  <colgroup><col width="170"/><col width="175"/><col width="185"/><col width="290"/></colgroup>
+  <thead><tr><th align="center" background-color="light-gray">验收项</th><th align="center" background-color="light-gray">指标</th><th align="center" background-color="light-gray">建议门槛</th><th align="left" background-color="light-gray">失败解释</th></tr></thead>
+  <tbody>
+    <tr><td align="center">相速精度</td><td align="center">MAE、RMSE、Bias</td><td align="center">较未校准基线RMSE下降≥20%，|Bias|不增加</td><td align="left">若只改善校准点而恶化留出站，拒绝外推</td></tr>
+    <tr><td align="center">到时精度</td><td align="center">|ΔT|及RMSE</td><td align="center">优于常速基线；同时报告小时数</td><td align="left">源时刻误差与速度误差需分开</td></tr>
+    <tr><td align="center">空间定位</td><td align="center">波峰位置误差Δx</td><td align="center">≤目标网格2格或业务阈值</td><td align="left">阈值须随网格分辨率预注册</td></tr>
+    <tr><td align="center">区间校准</td><td align="center">90%区间覆盖率</td><td align="center">验证样本足够时为85%–95%</td><td align="left">覆盖过低表示区间过窄；过高且过宽表示信息量不足</td></tr>
+    <tr><td align="center">泛化</td><td align="center">留一站/留一事件</td><td align="center">至少1个独立站或2个独立事件</td><td align="left">没有独立留出数据时只发布先验敏感性包络</td></tr>
+    <tr><td align="center">数值收敛</td><td align="center">网格/步长加密差</td><td align="center">关键输出变化&lt;5%</td><td align="left">否则离散误差不可忽略</td></tr>
+  </tbody>
+</table>
+<p align="center"><i>表5：建议验收门槛用于试点预注册，需由目标任务精度修订</i></p>
+<p>消融应保持同一留出集，至少比较：实测地形/平滑地形、同期温盐/气候态温盐、含流/无流、线性/有限振幅、单模态/多模态、直线路径/折射射线、乘性/加性/物理参数校准。每项同时报告 RMSE、Bias、覆盖率、区间宽度和计算成本；若某项只降低拟合误差却不改善留出误差，不纳入生产流程。</p>
+
+<hr/>
+<h2>八、综合判断：经验校准可用于路径估计，不可替代环境场</h2>
+<callout emoji="📌" background-color="light-blue" border-color="blue">
+  <p><b>综合判断</b>：现有文献不支持“输入一个点真实波速，即由单一经验公式可靠外推南海其他位置”的强命题。</p>
+  <p>该判断由三层证据推出：现场阵列表明深盆与陆坡速度及其相对线性偏差不同；多站研究表明波型与背景流可使速度排序沿程反转；已发表北南海经验模型使用多波迹反演而非单点标定。因此，单点真值只能校准一个预选自由度，全路径仍需地形、层化、流场、模态和振幅。</p>
+  <p>残余风险 / 反向信号：</p>
+  <ol>
+    <li seq="auto">Jackson 2009 确实证明经验相速图可达到小时量级到时误差，但其具体函数和完整训练样本本轮未取得全文，不能据摘要复现。</li>
+    <li seq="auto">若目标区域、季节、模态与训练条件高度一致，局地经验回归可优于复杂模型；该结论仍需独立站点或事件验证。</li>
+  </ol>
+</callout>
+<p><b>文献结论：</b>南海存在局地振幅—速度回归、相速—水深经验模型和数值传播模型；它们分别依赖局地阵列、多条卫星波迹或完整初边值，并无一种被验证为“单点真值即可全域外推”。</p>
+<p><b>本报告二次推导：</b>一个标量观测对局部灵敏度矩阵最多提供秩1约束，因而只能识别一个有效参数组合。比例或加性校准在数学上可计算，但全域共享误差结构是额外假设。</p>
+<p><b>探索性建议：</b>首轮实现采用“逐格模态速度场→有限振幅与背景流修正→单参数校准→射线到时→集合误差传播→留一站/事件验证”。若没有第二站或重复事件，交付名称应为“条件性空间预测及不确定性包络”，不应写成“南海真实波速场”。</p>
+
+<hr/>
+<h2>参考文献</h2>
+<ul>
+  <li>[1] Ramp, S. R.; Yang, Y. J.; Bahr, F. L., “Characterizing the nonlinear internal wave climate in the northeastern South China Sea”, 2010, Nonlinear Processes in Geophysics 17:481–498, DOI 10.5194/npg-17-481-2010. <a href="https://doi.org/10.5194/npg-17-481-2010">https://doi.org/10.5194/npg-17-481-2010</a></li>
+  <li>[2] Zhao, Z.; Alford, M. H., “Source and propagation of internal solitary waves in the northeastern South China Sea”, 2006, Journal of Geophysical Research: Oceans 111(C11), DOI 10.1029/2006JC003644. <a href="https://doi.org/10.1029/2006JC003644">https://doi.org/10.1029/2006JC003644</a></li>
+  <li>[3] Alford, M. H. et al., “Speed and Evolution of Nonlinear Internal Waves Transiting the South China Sea”, 2010, Journal of Physical Oceanography 40(6):1338–1355, DOI 10.1175/2010JPO4388.1. <a href="https://doi.org/10.1175/2010JPO4388.1">https://doi.org/10.1175/2010JPO4388.1</a></li>
+  <li>[4] Jackson, C. R., “An Empirical Model for Estimating the Geographic Location of Nonlinear Internal Solitary Waves”, 2009, Journal of Atmospheric and Oceanic Technology 26(10):2243–2255, DOI 10.1175/2009JTECHO638.1. <a href="https://doi.org/10.1175/2009JTECHO638.1">https://doi.org/10.1175/2009JTECHO638.1</a></li>
+  <li>[5] Liang, J.; Li, X., “Generation of second-mode internal solitary waves during winter in the northern South China Sea”, 2019, Ocean Dynamics 69:313–321, DOI 10.1007/s10236-019-01246-6. <a href="https://doi.org/10.1007/s10236-019-01246-6">https://doi.org/10.1007/s10236-019-01246-6</a></li>
+  <li>[6] Helfrich, K. R.; Melville, W. K., “Long Nonlinear Internal Waves”, 2006, Annual Review of Fluid Mechanics 38:395–425, DOI 10.1146/annurev.fluid.38.050304.092129. <a href="https://doi.org/10.1146/annurev.fluid.38.050304.092129">https://doi.org/10.1146/annurev.fluid.38.050304.092129</a></li>
+  <li>[7] Grimshaw, R.; Pelinovsky, E.; Poloukhina, O.; Talipova, T., “Higher-order Korteweg-de Vries models for internal solitary waves in a stratified shear flow with a free surface”, 2002, Nonlinear Processes in Geophysics 9:221–235, DOI 10.5194/npg-9-221-2002. <a href="https://doi.org/10.5194/npg-9-221-2002">https://doi.org/10.5194/npg-9-221-2002</a></li>
+  <li>[8] Davis, R. E.; Acrivos, A., “Solitary internal waves in deep water”, 1967, Journal of Fluid Mechanics 29:593–607, DOI 10.1017/S0022112067001041. <a href="https://doi.org/10.1017/S0022112067001041">https://doi.org/10.1017/S0022112067001041</a></li>
+  <li>[9] Lamb, K. G., “A numerical investigation of solitary internal waves with trapped cores formed via shoaling”, 2002, Journal of Fluid Mechanics 451:109–144, DOI 10.1017/S002211200100636X. <a href="https://doi.org/10.1017/S002211200100636X">https://doi.org/10.1017/S002211200100636X</a></li>
+  <li>[10] Cai, S.; Xie, J., “A propagation model for the internal solitary waves in the northern South China Sea”, 2010, Journal of Geophysical Research: Oceans 115(C12), DOI 10.1029/2010JC006341. <a href="https://doi.org/10.1029/2010JC006341">https://doi.org/10.1029/2010JC006341</a></li>
+  <li>[11] Vlasenko, V.; Stashchuk, N., “Three-dimensional shoaling of large-amplitude internal waves”, 2007, Journal of Geophysical Research: Oceans 112(C11), DOI 10.1029/2007JC004107. <a href="https://doi.org/10.1029/2007JC004107">https://doi.org/10.1029/2007JC004107</a></li>
+  <li>[12] Lamb, K. G.; Warn-Varnas, A., “Two-dimensional numerical simulations of shoaling internal solitary waves at the ASIAEX site in the South China Sea”, 2015, Nonlinear Processes in Geophysics 22:289–312, DOI 10.5194/npg-22-289-2015. <a href="https://doi.org/10.5194/npg-22-289-2015">https://doi.org/10.5194/npg-22-289-2015</a></li>
+  <li>[13] Lien, R.-C. et al., “Properties and energetics of internal solitary waves in the South China Sea”, 2014, Journal of Physical Oceanography 44(4):1095–1115, DOI 10.1175/JPO-D-13-088.1. <a href="https://doi.org/10.1175/JPO-D-13-088.1">https://doi.org/10.1175/JPO-D-13-088.1</a></li>
+  <li>[14] 2025年北部南海内孤立波高分辨率模拟预印本，arXiv:2502.01607v2；题名、作者与期刊页码本轮材料未完整提供。 <a href="https://arxiv.org/abs/2502.01607v2">https://arxiv.org/abs/2502.01607v2</a></li>
+  <li>[15] Ramp, S. R. et al., “Internal Solitons in the Northeastern South China Sea Part I: Sources and Deep Water Propagation”, 2004, IEEE Journal of Oceanic Engineering 29(4):1157–1181, DOI 10.1109/JOE.2004.840839. <a href="https://doi.org/10.1109/JOE.2004.840839">https://doi.org/10.1109/JOE.2004.840839</a></li>
+  <li>[16] Liu, A. K.; Ramp, S. R.; Zhao, Y.; Tang, T. Y., “A Case Study of Internal Solitary Wave Propagation During ASIAEX 2001”, 2004, IEEE Journal of Oceanic Engineering 29(4):1144–1156, DOI 10.1109/JOE.2004.841392. <a href="https://doi.org/10.1109/JOE.2004.841392">https://doi.org/10.1109/JOE.2004.841392</a></li>
+  <li>[17] Li, Q.; Farmer, D. M., “The Generation and Evolution of Nonlinear Internal Waves in the Deep Basin of the South China Sea”, 2011, Journal of Physical Oceanography 41(7):1345–1363, DOI 10.1175/2011JPO4587.1. <a href="https://doi.org/10.1175/2011JPO4587.1">https://doi.org/10.1175/2011JPO4587.1</a></li>
+  <li>[18] Buijsman, M. C.; Kanarska, Y.; McWilliams, J. C., “On the generation and evolution of nonlinear internal waves in the South China Sea”, 2010, Journal of Geophysical Research: Oceans 115(C2), DOI 10.1029/2009JC005275. <a href="https://doi.org/10.1029/2009JC005275">https://doi.org/10.1029/2009JC005275</a></li>
+  <li>[19] Chen, Y.-J.; Ko, D. S.; Shaw, P.-T., “The generation and propagation of internal solitary waves in the South China Sea”, 2013, Journal of Geophysical Research: Oceans 118(12):6578–6589, DOI 10.1002/2013JC009319. <a href="https://doi.org/10.1002/2013JC009319">https://doi.org/10.1002/2013JC009319</a></li>
+  <li>[20] Hsu, M.-K.; Liu, A. K., “Nonlinear Internal Waves in the South China Sea”, 2000, Canadian Journal of Remote Sensing 26(2):72–81, DOI 10.1080/07038992.2000.10874757. <a href="https://doi.org/10.1080/07038992.2000.10874757">https://doi.org/10.1080/07038992.2000.10874757</a></li>
+  <li>[21] Ramp, S. R. et al., 南海缓坡浅化内波观测研究, 2022, Nonlinear Processes in Geophysics 29:279–299, DOI 10.5194/npg-29-279-2022；题名与逐图定位本轮材料未完整提供。 <a href="https://doi.org/10.5194/npg-29-279-2022">https://doi.org/10.5194/npg-29-279-2022</a></li>
+</ul>

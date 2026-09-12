@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>水深与密度跃层如何控制内孤立波传播速度</title>
+<style>
+  :root{--ink:#10283c;--muted:#5d7182;--paper:#f5f2ea;--card:#fffdf8;--line:#ccd6d7;--navy:#143d59;--cyan:#2d8797;--teal:#31a69a;--amber:#e5a63b;--coral:#d96850;--soft:#e8f1ef}
+  *{box-sizing:border-box} html,body{margin:0;background:#dfe7e6;color:var(--ink);font-family:Inter,"Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif}
+  body{padding:26px}.figure{width:min(1500px,100%);min-height:940px;margin:auto;background:var(--paper);box-shadow:0 20px 60px #18374828;position:relative;overflow:hidden}
+  .topbar{height:12px;background:linear-gradient(90deg,var(--navy) 0 58%,var(--teal) 58% 82%,var(--amber) 82%)}
+  header{padding:34px 48px 22px;border-bottom:1px solid #c9d2d0;display:flex;justify-content:space-between;gap:30px;align-items:flex-end}
+  .kicker{font-size:14px;font-weight:800;letter-spacing:.16em;color:var(--cyan);text-transform:uppercase;margin-bottom:8px}.title{font-family:"Noto Serif SC","Songti SC",serif;font-weight:800;font-size:34px;line-height:1.25;margin:0}.sub{color:var(--muted);font-size:15px;margin-top:9px}
+  .scope{background:var(--navy);color:#fff;padding:14px 17px;border-radius:4px;min-width:310px;font-size:13px;line-height:1.55}.scope b{color:#9ee2db}.scope code{font-size:12px;color:#fff}
+  main{padding:28px 48px 22px}.lane{display:grid;grid-template-columns:1.05fr 50px 1.18fr 50px 1.05fr;align-items:stretch}.arrow{display:grid;place-items:center;color:var(--cyan);font-size:30px;font-weight:300}.stage{background:var(--card);border:1px solid var(--line);border-top:5px solid var(--cyan);padding:19px 20px 17px;min-height:305px;position:relative}.stage.s2{border-top-color:var(--teal)}.stage.s3{border-top-color:var(--amber)}
+  .num{position:absolute;right:16px;top:12px;font-size:36px;font-weight:900;color:#153d5914}.tag{font-size:12px;letter-spacing:.12em;font-weight:900;color:var(--cyan)}h2{font-size:19px;margin:5px 0 14px}.rows{display:grid;gap:9px}.row{border-left:3px solid #b9cdcc;padding:3px 0 3px 11px}.row b{display:block;font-size:14px}.row span{font-size:12px;color:var(--muted);line-height:1.45}.eq{margin-top:15px;background:#edf4f2;border:1px solid #c9ddda;padding:11px 12px;font-family:"STIX Two Math","Times New Roman",serif;font-size:16px;line-height:1.5}.eq small{display:block;color:var(--muted);font-family:Inter,"Noto Sans SC",sans-serif;font-size:11px;margin-top:4px}
+  .plus{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:10px}.chip{background:#f6eee0;border:1px solid #ead6aa;padding:9px}.chip b{font-size:12px;color:#8a5e12}.chip div{font-family:"Times New Roman",serif;font-size:15px;margin-top:4px}.out{background:#173e58;color:white;padding:12px;margin-top:12px}.out b{color:#9ee2db;font-size:12px}.out div{font-family:"Times New Roman",serif;font-size:18px;margin-top:4px}
+  .section-label{display:flex;align-items:center;gap:12px;margin:27px 0 13px;font-size:12px;font-weight:900;letter-spacing:.12em;color:var(--muted)}.section-label:after{content:"";height:1px;flex:1;background:#cbd4d2}
+  .logic{display:grid;grid-template-columns:1.2fr .92fr 1fr;gap:14px}.panel{background:#fffdf9;border:1px solid var(--line);padding:16px 18px}.panel h3{font-size:14px;margin:0 0 10px}.bar{height:12px;background:#e2e8e6;position:relative;margin:10px 0 4px}.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--cyan),var(--teal))}.axis{display:flex;justify-content:space-between;color:var(--muted);font-size:11px}.note{font-size:12px;color:var(--muted);line-height:1.5;margin-top:8px}.rules{display:grid;gap:7px}.rule{display:flex;gap:8px;font-size:12px;line-height:1.4}.dot{width:9px;height:9px;flex:0 0 9px;border-radius:50%;margin-top:4px}.boundary{border:1px solid #e0a894;background:#fff3ee;padding:15px 18px;display:flex;gap:14px;align-items:flex-start}.boundary .icon{color:var(--coral);font-size:22px;font-weight:900}.boundary b{font-size:13px;color:#9b3f2e}.boundary p{margin:4px 0 0;font-size:12px;line-height:1.5;color:#76483f}
+  footer{padding:13px 48px 18px;border-top:1px solid #c9d2d0;display:flex;justify-content:space-between;gap:20px;color:#667886;font-size:10.5px;line-height:1.45}.refs{max-width:1000px}.stamp{white-space:nowrap;text-align:right;font-weight:700;color:var(--navy)}
+  @media(max-width:1000px){body{padding:0}.figure{min-height:0}.lane{grid-template-columns:1fr}.arrow{transform:rotate(90deg);height:36px}.logic{grid-template-columns:1fr}header{align-items:flex-start;flex-direction:column}.scope{min-width:0;width:100%}}
+</style>
+</head>
+<body><article class="figure"><div class="topbar"></div>
+<header><div><div class="kicker">机制链 · 局地环境 → 局地相速</div><h1 class="title">水深与密度跃层如何控制<br>内孤立波传播速度</h1><div class="sub">先逐位置求线性模态基准，再叠加有限振幅与背景流；输出始终绑定同一事件 <i>e</i>、位置 <i>x</i> 与时刻 <i>t</i>。</div></div><div class="scope"><b>图中对象</b>　同一波事件 <i>e</i> 的局地计算<br><code>x [m] · z [m] · t [s] · c [m s⁻¹]</code><br>箭头表示计算依赖，不表示把离散观测拼接成连续场。</div></header>
+<main>
+  <div class="lane">
+    <section class="stage"><div class="num">01</div><div class="tag">LOCAL ENVIRONMENT</div><h2>环境场定义波导</h2><div class="rows">
+      <div class="row"><b>水深与层厚</b><span><i>H(x)</i>、<i>h₁(x), h₂(x)</i> [m]；控制可容纳的垂向模态与长波尺度。</span></div>
+      <div class="row"><b>密度与浮力频率</b><span><i>ρ(z,x,t)</i> [kg m⁻³]；<i>N(z,x,t)</i> [s⁻¹]，跃层强度、深度与厚度共同改变本征值。</span></div>
+      <div class="row"><b>背景流与波态</b><span><i>U(z,x,t)</i> [m s⁻¹]；事件 <i>e</i> 的模态 <i>n</i>、振幅 <i>A</i> [m]、方向 <i>ŝ</i>。</span></div>
+    </div><div class="eq">g′ = g(ρ₂−ρ₁)/ρ₀ <small>约化重力 g′ [m s⁻²]；g [m s⁻²]</small></div></section>
+    <div class="arrow">→</div>
+    <section class="stage s2"><div class="num">02</div><div class="tag">LINEAR BASELINE</div><h2>逐位置求线性模态相速</h2><div class="rows"><div class="row"><b>两层长波近似</b><span>适于刚盖、静止、长波且层化可被两层表示。</span></div></div>
+      <div class="eq">c₀²(x)=g′ h₁h₂/(h₁+h₂)<small>c₀ [m s⁻¹]；h₁,h₂ [m]</small></div>
+      <div class="rows" style="margin-top:10px"><div class="row"><b>连续层化模态</b><span>每个 <i>x,t</i> 单独求解；归一化须与后续系数一致。</span></div></div>
+      <div class="eq">φₙ″ + N²(z,x,t)φₙ/cₙ² = 0<small>φₙ(0)=φₙ(−H)=0；cₙ [m s⁻¹]</small></div>
+    </section>
+    <div class="arrow">→</div>
+    <section class="stage s3"><div class="num">03</div><div class="tag">PHYSICAL CORRECTIONS</div><h2>修正后得到事件局地速度</h2>
+      <div class="plus"><div class="chip"><b>有限振幅 · KdV</b><div>Δc<sub>NL</sub>=αA/3</div></div><div class="chip"><b>中等非线性 · eKdV</b><div>+ α₁A²/6</div></div><div class="chip"><b>均匀流投影</b><div>U·ŝ</div></div><div class="chip"><b>剪切 / 强非线性</b><div>TG 或 DJL</div></div></div>
+      <div class="out"><b>同一事件 e 的局地有效速度</b><div>c<sub>eff,e</sub>(x,t)=cₙ+Δc<sub>NL,e</sub>+U·ŝ</div></div>
+      <div class="note">垂向剪切时，不能简单加表层流速；需解含 <i>U(z)</i> 的本征问题。DJL 的 <i>c</i> 是非线性本征值，不是固定 <i>c₀</i> 的事后加项。</div>
+    </section>
+  </div>
+
+  <div class="section-label">因果方向与适用边界</div>
+  <div class="logic">
+    <section class="panel"><h3>主趋势：波导改变 → 本征速度改变</h3><div class="bar"><i style="width:78%"></i></div><div class="axis"><span>浅 / 弱层化</span><span>示意：局地 cₙ</span><span>深 / 强层化</span></div><div class="note">方向需由实际剖面求解，不能仅凭“更深一定更快”替代模态计算。变系数模型要求环境尺度 <i>Lₑ</i> ≫ 波宽/波长。</div></section>
+    <section class="panel"><h3>修正项：可改变幅度甚至排序</h3><div class="rules"><div class="rule"><i class="dot" style="background:var(--teal)"></i><span><b>非线性：</b>南海二模态个案 0.56 → 0.65 m s⁻¹（约 +16%）。</span></div><div class="rule"><i class="dot" style="background:var(--amber)"></i><span><b>背景流：</b>沿坡段 A/B 波速度排序可反转。</span></div><div class="rule"><i class="dot" style="background:var(--coral)"></i><span><b>二维地形：</b>折射、聚焦与散焦改变路径和到时。</span></div></div></section>
+    <section class="boundary"><div class="icon">!</div><div><b>事件边界：禁止“拼场”</b><p>事件 <i>e₁</i> 与 <i>e₂</i> 的速度、振幅、潮相或区间均值必须分层保存与绘制。只可在事件级统计阶段比较分布；不得按经度/距离拼接成一条看似连续的 <i>c(x)</i>。</p></div></section>
+  </div>
+</main>
+<footer><div class="refs">依据：Liang &amp; Li (2019), Ocean Dynamics, DOI 10.1007/s10236-019-01246-6；Alford et al. (2010), JPO, DOI 10.1175/2010JPO4388.1；Helfrich &amp; Melville (2006), ARFM, DOI 10.1146/annurev.fluid.38.050304.092129。数值 0.56/0.65 m s⁻¹仅为指定冬季二模态算例，不代表南海连续空间场。</div><div class="stamp">DR · 2026-09-11<br>机制示意｜非比例地图</div></footer>
+</article></body></html>

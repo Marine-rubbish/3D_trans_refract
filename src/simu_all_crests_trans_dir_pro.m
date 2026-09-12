@@ -4,11 +4,11 @@ clc; clear; close all;
 addpath(genpath('..\utils')); % 确保包含 reachPointByTranslation 等函数
 
 %% ==================== 参数设置 ====================
-angle_tol = 90; % 角度容差（度）
+angle_tol = 90;     % 角度容差（度）
 resample_res = 250; % 波峰线重采样分辨率 (m)
-lambda_dir = 0.02;
-lambda_dir = 0;
-output_mat_name = 'matched_results_with_flip.mat';
+% lambda_dir = 0.02;  % 方向差权重系数，越大表示方向差在匹配中越重要
+lambda_dir = 0;     % 默认不使用
+output_mat_name = 'matched_results_with_capsules.mat';
 
 % Debug entry points. Keep disabled for the normal batch run.
 DEBUG.plotKPoint = false;
@@ -36,7 +36,7 @@ T = readtable(fullfile(mooring_dir, mooring_name));
 obs_modes = T{:, 1}; % <--- 修改点1：从第1列读取 Mode (1或2)
 st_times  = T{:, 2}; % 第2列是时间
 ed_times  = T{:, 3};
-obs_dirs  = T{:, 5}; % <--- 请确认第3列是方向(Degree)。如果是时间，请改为对应列号！
+obs_dirs  = T{:, 5}; % <--- 请确认第5列是方向(Degree)。如果是时间，请改为对应列号！
 
 numCrests = 0;
 for k = 1:length(shp_filelist)
@@ -47,7 +47,7 @@ end
 %% ==================== 主循环：计算与匹配 ====================
 % 初始化存储容器
 w = Inf(numCrests, size(T, 1));            % 速度差 (用于匹配权重)
-dir_diff_mat = Inf(numCrests, size(T, 1)); % [新增] 方向差矩阵
+dir_diff_mat = Inf(numCrests, size(T, 1)); % 方向差矩阵
 
 crestLen = zeros(numCrests, size(T, 1));
 crestDir_arr = zeros(numCrests, 1);
@@ -92,21 +92,21 @@ for k = 1:length(shp_filelist)
         %     % end
         % end
 
-        cData = buildCrestData(rawLat, rawLon, resample_res);
-        temp_crest_data{global_idx} = cData;
-        K_val = signedPositionFromArcLength(cData.s_peak, cData.L_total);
-        isPassK = true;
-        propLatK = NaN;
-        propLonK = NaN;
-        isPass_list(global_idx) = isPassK;
-        signedPos_list(global_idx) = K_val;
-        signedPos_Moor = K_val;
+        % cData = buildCrestData(rawLat, rawLon, resample_res);
+        % temp_crest_data{global_idx} = cData;
+        % K_val = signedPositionFromArcLength(cData.s_peak, cData.L_total);
+        % isPassK = true;
+        % propLatK = NaN;
+        % propLonK = NaN;
+        % isPass_list(global_idx) = isPassK;
+        % signedPos_list(global_idx) = K_val;
+        % signedPos_Moor = K_val;
 
-        if shouldPlotDebugCrest(DEBUG, global_idx)
-            plotCrestKDebug(rawLat, rawLon, cData, mooring_lat, mooring_lon, ...
-                signedPos_Moor, propLatK, propLonK);
-            fprintf("isPass: %d, Pos: %d\n", isPassK, signedPos_Moor);
-        end
+        % if shouldPlotDebugCrest(DEBUG, global_idx)
+        %     plotCrestKDebug(rawLat, rawLon, cData, mooring_lat, mooring_lon, ...
+        %         signedPos_Moor, propLatK, propLonK);
+        %     fprintf("isPass: %d, Pos: %d\n", isPassK, signedPos_Moor);
+        % end
 
         crestDir_arr(global_idx) = cDir;
         crest_sensing_time{global_idx} = shp_time;
@@ -124,13 +124,13 @@ for k = 1:length(shp_filelist)
             d_diff = abs(cDir - target_obs_dir);
             if d_diff > 180, d_diff = 360 - d_diff; end
 
-            if d_diff > angle_tol
-                continue; 
-            end
+            % if d_diff > angle_tol
+            %     continue; 
+            % end
 
             % --- 传播检测 ---
             param_val = T{target_mooring_idx, 4}; % 假设第4列是速度相关参数
-            [isPass, propSpeed, crest_min_dis] = isCrestPassMooring_bin_dir(rawLat, rawLon, shp_time, ...
+            [isPass, propSpeed, crest_min_dis] = isCrestPassMooring_capsule_dir(rawLat, rawLon, shp_time, ...
                 current_mode, mooring_lat, mooring_lon, ...
                 st_times(target_mooring_idx), ed_times(target_mooring_idx), ...
                 60, 86400*10, 100000);
@@ -144,7 +144,7 @@ for k = 1:length(shp_filelist)
                 end
 
                 % % --- 东沙检测 ---
-                % [isPass_Dongsha, ~, signedPos_DS, ~, ~, ~, ~] = reachPointByTranslation( ...
+                % [isPass_Dongsha, ~, signedPos_DS, ~, ~, ~, ~] = reachPointAlongPropDir( ...
                 %     rawLat, rawLon, shp_time, dongsha_lat, dongsha_lon, [1 1.1], 0);
 
                 % 记录匹配信息
@@ -205,14 +205,18 @@ for k = 1:num_matches
     out_peak_lat(k)     = cData.peakLat;
     
     % 3. 计算 K_mooring
-    [isPass, ~, signedPos_Moor, ~, ~, ~, ~] = reachMooringByTranslation( ...
+    [isPass, ~, s_hit_meters, ~, ~, ~, ~] = reachMooringByTranslation( ...
         cData.resLat, cData.resLon, out_crest_time(k), ...
-        mooring_lat, mooring_lon, [0.1 5.0], 0); 
+        mooring_lat, mooring_lon, [0.1 5.0], 100000); 
     
-    if isPass
-        s_hit = (signedPos_Moor + 1) / 2 * cData.L_total;
+    if isPass && isfinite(s_hit_meters)
+        s_hit = max(0, min(s_hit_meters, cData.L_total));
         if s_hit <= cData.s_peak
-            K = (s_hit - cData.s_peak) / cData.s_peak; 
+            if cData.s_peak > 1e-3
+                K = (s_hit - cData.s_peak) / cData.s_peak;
+            else
+                K = -1;
+            end
         else
             len_north = max(cData.L_total - cData.s_peak, 1e-3);
             K = (s_hit - cData.s_peak) / len_north; 
@@ -264,7 +268,7 @@ save(output_mat_name, 'mode', 'mooring_time', 'speed_diff', 'dir_diff', ...
 %% 辅助函数
 function cData = buildCrestData(rawLat, rawLon, resample_res)
     [resLat, resLon, peakLat, peakLon, s_peak, L_total] = ...
-        analyze_crest_shape(rawLat, rawLon, resample_res);
+        analyze_crest_shape_orig(rawLat, rawLon, resample_res);
     s = crestArcLengthMeters(resLat, resLon);
 
     cData.resLat = resLat;
@@ -278,6 +282,7 @@ end
 
 
 function s = crestArcLengthMeters(lat, lon)
+    % 计算波峰线的累计弧长 (米)
     good = isfinite(lat) & isfinite(lon);
     lat = lat(good);
     lon = lon(good);
