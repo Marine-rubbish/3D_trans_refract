@@ -5,7 +5,7 @@ function outputPath = export_matched_crests_animation_html(matPath, outputPath)
 
 projectRoot = fileparts(fileparts(mfilename('fullpath')));
 if nargin < 1 || isempty(matPath)
-    matPath = fullfile(projectRoot, 'TMP', 'matched_results_with_capsules.mat');
+    matPath = fullfile(projectRoot, 'src', 'matched_results_with_capsules.mat');
 end
 if nargin < 2 || isempty(outputPath)
     outputPath = fullfile(projectRoot, 'visualization', 'matched_crests_animation.html');
@@ -25,9 +25,12 @@ dirDiff = fieldOr(S, 'dir_diff', nan(n,1));
 kMooring = fieldOr(S, 'K_mooring', nan(n,1));
 peakLon = fieldOr(S, 'peak_lon', nan(n,1));
 peakLat = fieldOr(S, 'peak_lat', nan(n,1));
+closestAlong = fieldOr(S, 'closest_along_m', nan(n,1));
+closestCross = fieldOr(S, 'closest_cross_m', nan(n,1));
+closestPointLon = fieldOr(S, 'closest_point_lon', nan(n,1));
+closestPointLat = fieldOr(S, 'closest_point_lat', nan(n,1));
 moorLat = 20.816666666666666;
 moorLon = 115.76666666666667;
-R = 6371000;
 
 emptyCrest = struct('row', 0, 'id', 0, 'mode', 0, 'dir', 0, ...
     'dtHours', 0, 'alongKm', 0, 'crossKm', 0, 'speed', 0, ...
@@ -40,25 +43,34 @@ dtHoursAll = nan(n,1);
 pointCount = 0;
 
 for i = 1:n
-    lon = vectorAt(S.crest_lon, i);
-    lat = vectorAt(S.crest_lat, i);
-    good = isfinite(lon) & isfinite(lat);
-    lon = lon(good); lat = lat(good);
-    [lon, lat] = thinLine(lon, lat, 90);
+    fullLon = vectorAt(S.crest_lon, i);
+    fullLat = vectorAt(S.crest_lat, i);
+    good = isfinite(fullLon) & isfinite(fullLat);
+    fullLon = fullLon(good);
+    fullLat = fullLat(good);
 
     direction = double(S.crest_dir(i));
     dtHours = hours(S.mooring_time(i) - S.crest_time(i));
-    [alongM, crossM, closestIdx] = signedAlongDistance(lat, lon, moorLat, moorLon, direction);
+    alongM = scalarAt(closestAlong, i);
+    crossM = scalarAt(closestCross, i);
+    pointLon = scalarAt(closestPointLon, i);
+    pointLat = scalarAt(closestPointLat, i);
+    if ~all(isfinite([alongM, crossM, pointLon, pointLat]))
+        [alongM, crossM, pointLon, pointLat] = ...
+            signedAlongDistance(fullLat, fullLon, ...
+            moorLat, moorLon, direction);
+    end
     speed = abs(alongM) / max(abs(dtHours) * 3600, eps);
     if ~isfinite(speed) || abs(dtHours) < eps
         speed = NaN;
     end
 
-    meanLat = mean([lat(:); moorLat], 'omitnan');
+    meanLat = mean([fullLat(:); moorLat], 'omitnan');
     dNorth = alongM * cosd(direction);
     dEast = alongM * sind(direction);
-    dLat = rad2deg(dNorth / R);
-    dLon = rad2deg(dEast / (R * cosd(meanLat)));
+    dLat = dNorth / 110540;
+    dLon = dEast / (111320 * cosd(meanLat));
+    [lon, lat] = thinLine(fullLon, fullLat, 90);
 
     crests(i).row = i;
     crests(i).id = scalarAt(crestIdx, i);
@@ -76,9 +88,9 @@ for i = 1:n
     crests(i).mooringTime = dateText(S.mooring_time(i));
     crests(i).peakLon = scalarAt(peakLon, i);
     crests(i).peakLat = scalarAt(peakLat, i);
-    if isfinite(closestIdx)
-        crests(i).hitLon = lon(closestIdx) + dLon;
-        crests(i).hitLat = lat(closestIdx) + dLat;
+    if all(isfinite([pointLon, pointLat]))
+        crests(i).hitLon = pointLon + dLon;
+        crests(i).hitLat = pointLat + dLat;
     else
         crests(i).hitLon = NaN;
         crests(i).hitLat = NaN;
@@ -99,7 +111,8 @@ payload.meta = struct('source', strrep(matPath, '\', '/'), ...
     'speedDefinition', 'abs(along-track distance) / abs(mooring_time - crest_time)', ...
     'animationDefinition', 'normalized per crest: 0 = sensed position, 1 = matched mooring-time position');
 payload.map = struct('bounds', [110 122 18 23], ...
-    'mooring', struct('lon', moorLon, 'lat', moorLat, 'radiusKm', 100));
+    'mooring', struct('lon', moorLon, 'lat', moorLat, 'radiusKm', 100), ...
+    'dongsha', struct('lon', 116.8, 'lat', 20.7));
 payload.stats = struct('count', n, 'points', pointCount, ...
     'mode1', nnz(mode == 1), 'mode2', nnz(mode == 2), ...
     'medianSpeed', median(finiteSpeeds, 'omitnan'), ...
@@ -120,7 +133,7 @@ html = strrep(template, '__CREST_DATA_JSON__', json);
 if ~isempty(outDir) && ~isfolder(outDir), mkdir(outDir); end
 fid = fopen(outputPath, 'w', 'n', 'UTF-8');
 assert(fid >= 0, 'Cannot open output: %s', outputPath);
-cleanup = onCleanup(@() fclose(fid)); %#ok<NASGU>
+cleanup = onCleanup(@() fclose(fid));
 fwrite(fid, html, 'char');
 fprintf('Wrote %s (%d crests, %d retained points)\n', outputPath, n, pointCount);
 end
@@ -150,26 +163,83 @@ function text = dateText(value)
 try
     text = char(value, 'yyyy-MM-dd HH:mm:ss');
 catch
-    text = datestr(value, 'yyyy-mm-dd HH:MM:SS');
+    if isnumeric(value)
+        value = datetime(value, 'ConvertFrom', 'datenum');
+    else
+        value = datetime(value);
+    end
+    text = char(value, 'yyyy-MM-dd HH:mm:ss');
 end
 end
 
-function [signedM, crossM, closestIdx] = signedAlongDistance(lat, lon, moorLat, moorLon, direction)
+function [signedM, crossM, pointLon, pointLat] = ...
+        signedAlongDistance(lat, lon, moorLat, moorLon, direction)
 if isempty(lat) || ~isfinite(direction)
-    signedM = NaN; crossM = NaN; closestIdx = NaN; return;
+    signedM = NaN;
+    crossM = NaN;
+    pointLon = NaN;
+    pointLat = NaN;
+    return;
 end
-R = 6371000;
-lat0 = mean([lat(:); moorLat], 'omitnan');
-lon0 = mean([lon(:); moorLon], 'omitnan');
-x = R * cosd(lat0) .* deg2rad(lon - lon0);
-y = R .* deg2rad(lat - lat0);
-xm = R * cosd(lat0) * deg2rad(moorLon - lon0);
-ym = R * deg2rad(moorLat - lat0);
-u = [sind(direction), cosd(direction)];
-dx = xm - x; dy = ym - y;
-along = dx .* u(1) + dy .* u(2);
-cross = -dx .* u(2) + dy .* u(1);
-[~, idx] = min(abs(cross));
-signedM = along(idx); crossM = cross(idx);
-closestIdx = idx;
+lat = lat(:);
+lon = lon(:);
+lat0 = mean(lat);
+lon0 = mean(lon);
+x = (lon-lon0) .* cosd(lat0) * 111320;
+y = (lat-lat0) * 110540;
+xm = (moorLon-lon0) * cosd(lat0) * 111320;
+ym = (moorLat-lat0) * 110540;
+q = [xm; ym];
+u = [sind(direction); cosd(direction)];
+u = u / norm(u);
+
+bestCross = inf;
+bestAlong = NaN;
+bestSignedCross = NaN;
+bestSegment = NaN;
+bestT = NaN;
+for i = 1:numel(x)-1
+    a = [x(i); y(i)];
+    b = [x(i+1); y(i+1)];
+    n = [-u(2); u(1)];
+    crossA = dot(q-a, n);
+    crossB = dot(q-b, n);
+    deltaCross = crossB-crossA;
+    alongA = dot(q-a, u);
+    alongB = dot(q-b, u);
+    deltaAlong = alongB-alongA;
+    crossTol = 1e-12 * max([1, abs(crossA), abs(crossB)]);
+
+    if abs(deltaCross) > crossTol
+        t = max(0, min(1, -crossA/deltaCross));
+    elseif abs(deltaAlong) > 1e-12 * max([1, abs(alongA), abs(alongB)])
+        t = max(0, min(1, -alongA/deltaAlong));
+    else
+        t = 0;
+    end
+
+    candidateCross = crossA+t*deltaCross;
+    candidateAlong = alongA+t*deltaAlong;
+    candidateDistance = abs(candidateCross);
+    distanceTol = 1e-9 * max([1, candidateDistance, bestCross]);
+    isBetter = ~isfinite(bestCross) || ...
+        candidateDistance < bestCross-distanceTol;
+    if ~isBetter && isfinite(bestCross) && ...
+            abs(candidateDistance-bestCross) <= distanceTol
+        alongTol = 1e-9 * max([1, abs(candidateAlong), abs(bestAlong)]);
+        isBetter = abs(candidateAlong) < abs(bestAlong)-alongTol;
+    end
+    if isBetter
+        bestCross = candidateDistance;
+        bestAlong = candidateAlong;
+        bestSignedCross = candidateCross;
+        bestSegment = i;
+        bestT = t;
+    end
+end
+
+signedM = bestAlong;
+crossM = bestSignedCross;
+pointLon = lon(bestSegment) + bestT*(lon(bestSegment+1)-lon(bestSegment));
+pointLat = lat(bestSegment) + bestT*(lat(bestSegment+1)-lat(bestSegment));
 end

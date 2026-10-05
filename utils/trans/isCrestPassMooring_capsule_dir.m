@@ -1,6 +1,6 @@
 function [isPass, propSpeed, crest_min_dis, details] = isCrestPassMooring_capsule_dir( ...
     crestLat, crestLon, crestTime, crestType, moorLat, moorLon, ...
-    moorStTime, moorEdTime, teps, tlim, radius)
+    moorStTime, moorEdTime, teps, tlim, radius, directionResolution)
 % isCrestPassMooring_capsule_dir 解析判断平移波峰线能否到达系泊点。
 %
 % 几何模型
@@ -19,11 +19,14 @@ function [isPass, propSpeed, crest_min_dis, details] = isCrestPassMooring_capsul
 %   teps               保留的旧接口参数（秒）；解析法不依赖迭代精度。
 %   tlim               相对 crestTime 的最大时间范围（秒）。
 %   radius             允许的最大横向距离（米）。
+%   directionResolution 可选；resolveCrestDirection 的返回结构。主匹配
+%                       入口应传入同一结构，保证匹配与保存使用同一方向。
 %
 % 输出
-%   isPass             几何可达且传播距离与系泊时间方向一致时为 true。
-%   propSpeed          不施加模态速度上限的可行正速度包络 [vmin,vmax]
-%                      （m/s）；后续匈牙利匹配负责速度限制。
+%   isPass             几何可达，且横向最近点的传播位移与系泊时间方向
+%                      一致时为 true。
+%   propSpeed          施加 5 m/s 硬上限后的可行正速度包络 [vmin,vmax]
+%                      （m/s）；后续匈牙利匹配继续使用该区间计算速度差。
 %   crest_min_dis      在 dPhysical 位移范围内，波峰扫掠区域到系泊点的最短
 %                      距离（米）。
 %   details            诊断结构，保存方向、时间、位移和速度区间等中间结果。
@@ -34,9 +37,11 @@ function [isPass, propSpeed, crest_min_dis, details] = isCrestPassMooring_capsul
 %   正速度要求 d 与 dt 同号。
 %
 % 判定策略
-%   对仅位于遥感时间之后的系泊事件，位移区间必须完全为正；对仅位于遥感
-%   时间之前的事件，位移区间必须完全为负。跨越零位移的区间视为前后不明。
-%   rawSpeedIntervals 为空时拒绝。
+%   在有限折线的连续线段上寻找横向距离系泊点最近的点。对仅位于遥感时间
+%   之后的系泊事件，该点的 d 必须为正；对仅位于遥感时间之前的事件，该点
+%   的 d 必须为负。最近点位于 d=0 或时间窗跨越遥感时刻时拒绝。
+%   初始方向位于 30°–180° 时，必须通过 maybeFlipCrestDir 的翻转条件；
+%   doFlip=false 时拒绝。可行速度与 (0,5] m/s 无交集时拒绝。
 %   feasibleSpeedIntervals 只作为模态速度范围诊断，不参与 isPass。
 
 isPass = false;
@@ -48,6 +53,7 @@ details = defaultDetails();
 if nargin < 11 || isempty(radius), radius = 0; end
 if nargin < 10 || isempty(tlim), tlim = inf; end
 if nargin < 9 || isempty(teps), teps = 0; end
+if nargin < 12, directionResolution = []; end
 details.searchToleranceSeconds = teps;
 if ~isscalar(radius) || ~isfinite(radius) || radius < 0
     error('radius must be a finite nonnegative scalar in meters.');
@@ -69,19 +75,33 @@ if numel(lat) < 2
 end
 
 %% 3. 确定传播方向
-% dirDeg 使用导航角：正北为 0 度，顺时针增加。此处暂时保持旧函数的方向
-% 计算和翻转规则，便于新旧方法进行对照。
-dirDeg = mod(90 - calcDirection(lat, lon), 360);
-if dirDeg > 45 && dirDeg < 180
-    [dirDegOut, doFlip, ~] = maybeFlipCrestDir(lat, lon, moorLat, moorLon);
-    if doFlip
-        dirDeg = dirDegOut;
-    end
+% 方向统一由 resolveCrestDirection 解析。主入口会把读取波锋时得到的
+% 同一结果传入；其他旧调用未传入时，也调用统一函数，不复制规则。
+if isempty(directionResolution)
+    directionResolution = resolveCrestDirection( ...
+        lat, lon, moorLat, moorLon);
+elseif ~isstruct(directionResolution) || ...
+        ~all(isfield(directionResolution, ...
+        {'isValid','initialDirDeg','dirDeg','flipRequired', ...
+         'doFlip','flipStats','reason'}))
+    error('directionResolution must come from resolveCrestDirection.');
 end
+details.initialDirDeg = directionResolution.initialDirDeg;
+details.dirDeg = directionResolution.dirDeg;
+details.directionFlipRequired = directionResolution.flipRequired;
+details.directionFlipAccepted = directionResolution.doFlip;
+details.directionFlipStats = directionResolution.flipStats;
+if ~directionResolution.isValid
+    details.reason = directionResolution.reason;
+    return;
+end
+dirDeg = directionResolution.dirDeg;
 details.dirDeg = dirDeg;
 
 %% 4. 根据模态设置参考速度范围
 % cBound 同时用于构造 dPhysical，并用于计算 details.speedIntervals。
+maxPropagationSpeedMps = 5;
+details.maxPropagationSpeedMps = maxPropagationSpeedMps;
 if crestType == 1
     cBound = [1, 3];
 else
@@ -125,15 +145,34 @@ details.physicalDisplacementRangeMeters = dPhysical;
 allDIntervals = zeros(0, 2);
 directionalDIntervals = zeros(0, 2);
 rawSpeedIntervals = zeros(0, 2);
+limitedSpeedIntervals = zeros(0, 2);
 feasibleSpeedIntervals = zeros(0, 2);
 hitSegments = zeros(0, 1);
 ambiguousSegments = zeros(0, 1);
+closestCrossTrackMeters = inf;
+closestSignedCrossTrackMeters = NaN;
+closestAlongDisplacementMeters = NaN;
+closestSegment = NaN;
+closestSegmentParameter = NaN;
 
 %% 8. 逐线段执行解析横向走廊求交
 % 与旧函数不同，这里遍历 1:numel(x)-1，因此最后一条线段也参与判断。
 for i = 1:numel(x)-1
     a = [x(i); y(i)];
     b = [x(i+1); y(i+1)];
+
+    % 在连续线段上解析求横向距离最小点。若不同线段的最小横向距离在
+    % 数值误差内相同，则取 |d| 更小者，减少折线点存储顺序的影响。
+    [segmentCrossTrack, segmentSignedCrossTrack, segmentAlong, segmentT] = ...
+        closestCrossTrackPoint(q, u, a, b);
+    if isBetterClosestPoint(segmentCrossTrack, segmentAlong, ...
+            closestCrossTrackMeters, closestAlongDisplacementMeters)
+        closestCrossTrackMeters = segmentCrossTrack;
+        closestSignedCrossTrackMeters = segmentSignedCrossTrack;
+        closestAlongDisplacementMeters = segmentAlong;
+        closestSegment = i;
+        closestSegmentParameter = segmentT;
+    end
 
     % 线段在 dPhysical 范围内平移后扫出平行四边形。计算系泊点到该
     % 扫掠区域的精确最短距离，并在所有线段之间取全局最小值。
@@ -149,8 +188,8 @@ for i = 1:numel(x)-1
     end
     allDIntervals(end+1, :) = dInterval; %#ok<AGROW>
 
-    % 系泊时间窗必须明确位于遥感时间的一侧；位移区间也必须完全位于
-    % 对应的一侧。跨越零位移的线段暂不参与匹配，并记录为模糊线段。
+    % 逐线段方向分类继续用于构造原有速度包络，但它不能单独决定
+    % isPass。最终还必须通过整条折线横向最近点的方向硬筛选。
     directionStatus = classifyDisplacementInterval(dInterval, timeDirection);
     if directionStatus == 0
         ambiguousSegments(end+1, 1) = i; %#ok<AGROW>
@@ -160,11 +199,13 @@ for i = 1:numel(x)-1
     end
     directionalDIntervals(end+1, :) = dInterval; %#ok<AGROW>
 
-    % rawIntervals 只要求速度为正，用于检查 d 与 dt 的符号是否相容。
-    % boundedIntervals 进一步与当前模态的 cBound 求交。
+    % rawIntervals 保留未限速诊断；limitedIntervals 是进入匹配的实际区间。
     rawIntervals = speedIntervalsFor(dInterval, [dtLo, dtHi], [0, inf]);
+    limitedIntervals = speedIntervalsFor(dInterval, [dtLo, dtHi], ...
+        [0, maxPropagationSpeedMps]);
     boundedIntervals = speedIntervalsFor(dInterval, [dtLo, dtHi], cBound);
     rawSpeedIntervals = [rawSpeedIntervals; rawIntervals]; %#ok<AGROW>
+    limitedSpeedIntervals = [limitedSpeedIntervals; limitedIntervals]; %#ok<AGROW>
     feasibleSpeedIntervals = [feasibleSpeedIntervals; boundedIntervals]; %#ok<AGROW>
     if ~isempty(rawIntervals)
         hitSegments(end+1, 1) = i; %#ok<AGROW>
@@ -175,9 +216,17 @@ end
 details.displacementIntervalsMeters = mergeIntervals(allDIntervals);
 details.directionalDisplacementIntervalsMeters = mergeIntervals(directionalDIntervals);
 details.rawSpeedIntervals = mergeIntervals(rawSpeedIntervals);
+details.limitedSpeedIntervals = mergeIntervals(limitedSpeedIntervals);
 details.speedIntervals = mergeIntervals(feasibleSpeedIntervals);
 details.hitSegments = unique(hitSegments, 'stable');
 details.ambiguousSegments = unique(ambiguousSegments, 'stable');
+details.closestCrossTrackMeters = closestCrossTrackMeters;
+details.closestSignedCrossTrackMeters = closestSignedCrossTrackMeters;
+details.closestAlongDisplacementMeters = closestAlongDisplacementMeters;
+details.closestSegment = closestSegment;
+details.closestSegmentParameter = closestSegmentParameter;
+details.closestDirectionStatus = classifySignedDisplacement( ...
+    closestAlongDisplacementMeters, timeDirection);
 
 %% 10. isPass 判定
 % 几何上完全无法进入 radius 时，无条件拒绝。
@@ -192,15 +241,32 @@ if timeDirection == 0
     return;
 end
 
-% 所有几何可达区间都跨越零位移时，前后关系不明确。
-if isempty(directionalDIntervals) && ~isempty(ambiguousSegments)
-    details.reason = "ambiguous_near_crest";
+% 横向最近点落在波峰当前所在位置时，无法确定传播前后关系。
+if details.closestDirectionStatus == 0
+    details.reason = "closest_point_direction_ambiguous";
     return;
 end
 
-% 几何可达但没有严格位于正确时间方向一侧的位移区间时拒绝。
+% 最近点的沿传播位移必须与系泊时间差同号。该判断是候选权值能否从
+% Inf 变为有限值的唯一方向硬条件。
+if details.closestDirectionStatus < 0
+    details.reason = "closest_point_time_direction_mismatch";
+    return;
+end
+
+% 最近点方向一致后，还必须存在不超过 5 m/s 的正速度。
+if isempty(limitedSpeedIntervals)
+    if isempty(rawSpeedIntervals)
+        details.reason = "no_positive_speed_interval";
+    else
+        details.reason = "speed_above_5_mps";
+    end
+    return;
+end
+
+% 保留原始区间检查，防御退化输入。
 if isempty(rawSpeedIntervals)
-    details.reason = "time_direction_mismatch";
+    details.reason = "no_positive_speed_interval";
     return;
 end
 % 模态速度交集只保留为诊断，不在此处拒绝；后续匈牙利匹配负责限速。
@@ -210,8 +276,8 @@ end
 % end
 
 isPass = true;
-propSpeed = [min(details.rawSpeedIntervals(:,1)), ...
-             max(details.rawSpeedIntervals(:,2))];
+propSpeed = [min(details.limitedSpeedIntervals(:,1)), ...
+             max(details.limitedSpeedIntervals(:,2))];
 details.reason = "pass";
 end
 
@@ -219,8 +285,13 @@ function details = defaultDetails()
 %DEFAULTDETAILS 构造固定字段的诊断结构，确保所有提前返回路径接口一致。
 details = struct( ...
     'reason', "not_evaluated", ...
+    'initialDirDeg', NaN, ...
     'dirDeg', NaN, ...
+    'directionFlipRequired', false, ...
+    'directionFlipAccepted', NaN, ...
+    'directionFlipStats', struct(), ...
     'speedBounds', [NaN NaN], ...
+    'maxPropagationSpeedMps', 5, ...
     'searchToleranceSeconds', NaN, ...
     'timeRangeSeconds', [NaN NaN], ...
     'timeDirection', NaN, ...
@@ -228,9 +299,16 @@ details = struct( ...
     'displacementIntervalsMeters', zeros(0,2), ...
     'directionalDisplacementIntervalsMeters', zeros(0,2), ...
     'rawSpeedIntervals', zeros(0,2), ...
+    'limitedSpeedIntervals', zeros(0,2), ...
     'speedIntervals', zeros(0,2), ...
     'hitSegments', zeros(0,1), ...
-    'ambiguousSegments', zeros(0,1));
+    'ambiguousSegments', zeros(0,1), ...
+    'closestCrossTrackMeters', inf, ...
+    'closestSignedCrossTrackMeters', NaN, ...
+    'closestAlongDisplacementMeters', NaN, ...
+    'closestSegment', NaN, ...
+    'closestSegmentParameter', NaN, ...
+    'closestDirectionStatus', NaN);
 end
 
 function direction = classifyTimeDirection(dtLo, dtHi)
@@ -271,6 +349,19 @@ elseif timeDirection < 0
     end
 else
     status = 0;
+end
+end
+
+function status = classifySignedDisplacement(d, timeDirection)
+%CLASSIFYSIGNEDDISPLACEMENT 判断单点位移与时间方向是否一致。
+%   +1 表示同号，-1 表示反号，0 表示时间跨零或位移接近零。
+tol = 1e-12 * max(1, abs(d));
+if timeDirection == 0 || ~isfinite(d) || abs(d) <= tol
+    status = 0;
+elseif sign(d) == timeDirection
+    status = 1;
+else
+    status = -1;
 end
 end
 
@@ -374,6 +465,51 @@ alongB = dot(q-b, u);
 deltaAlong = alongB - alongA;
 dAtRange = alongA + tRange * deltaAlong;
 interval = [min(dAtRange), max(dAtRange)];
+end
+
+function [absCross, signedCross, along, t] = closestCrossTrackPoint(q, u, a, b)
+%CLOSESTCROSSTRACKPOINT 求有限线段上横向距离系泊点最近的连续点。
+%
+% 横向坐标 cross(t) 在线段参数 t 上为线性函数。若线段与传播方向平行，
+% 整段横向距离相同，则在这些并列点中选择 |d| 最小者。
+n = [-u(2); u(1)];
+crossA = dot(q-a, n);
+crossB = dot(q-b, n);
+deltaCross = crossB - crossA;
+alongA = dot(q-a, u);
+alongB = dot(q-b, u);
+deltaAlong = alongB - alongA;
+crossTol = 1e-12 * max([1, abs(crossA), abs(crossB)]);
+
+if abs(deltaCross) > crossTol
+    t = max(0, min(1, -crossA/deltaCross));
+elseif abs(deltaAlong) > 1e-12 * max([1, abs(alongA), abs(alongB)])
+    t = max(0, min(1, -alongA/deltaAlong));
+else
+    t = 0;
+end
+
+signedCross = crossA + t*deltaCross;
+along = alongA + t*deltaAlong;
+absCross = abs(signedCross);
+end
+
+function better = isBetterClosestPoint(crossDistance, along, bestCross, bestAlong)
+%ISBETTERCLOSESTPOINT 先比较横向距离，并以 |d| 作为并列判据。
+if ~isfinite(bestCross)
+    better = true;
+    return;
+end
+
+crossTol = 1e-9 * max([1, crossDistance, bestCross]);
+if crossDistance < bestCross-crossTol
+    better = true;
+elseif abs(crossDistance-bestCross) <= crossTol
+    alongTol = 1e-9 * max([1, abs(along), abs(bestAlong)]);
+    better = abs(along) < abs(bestAlong)-alongTol;
+else
+    better = false;
+end
 end
 
 function distance = pointToSweptSegmentDistance(q, a, b, u, dLo, dHi)

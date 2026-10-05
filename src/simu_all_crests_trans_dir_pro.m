@@ -1,7 +1,7 @@
 % simu_all_crests_trans_dir_mode_update.m
 clc; clear; close all;
 
-addpath(genpath('..\utils')); % 确保包含 reachPointByTranslation 等函数
+addpath(genpath('../utils')); % 确保包含 reachPointByTranslation 等函数
 
 %% ==================== 参数设置 ====================
 angle_tol = 90;     % 角度容差（度）
@@ -25,11 +25,11 @@ dongsha_lon = 116.8;
 day_delay = 3;
 
 %% ==================== 数据读取 ====================
-shp_dir = 'F:\research\MODIS\shp_files';
+shp_dir = '../data/shp_files';
 shp_filelist = dir(fullfile(shp_dir, '*.shp'));
 
 % 读取系泊数据
-mooring_dir = 'F:\research\月份挑内波数据';
+mooring_dir = '../data/月份挑内波数据';
 mooring_name = '2020年内波时间与方向.xlsx'; 
 T = readtable(fullfile(mooring_dir, mooring_name));
 
@@ -76,14 +76,14 @@ for k = 1:length(shp_filelist)
         rawLat = crestLines(i).Y;
         rawLon = crestLines(i).X;
         
-        % 1. 计算传播方向
-        cDir = mod(90 - calcDirection(rawLat, rawLon), 360);
-        if cDir > 45 & cDir < 180
-            [dirDegOut, doFlip, ~] = maybeFlipCrestDir(rawLat, rawLon, mooring_lat, mooring_lon);
-            if doFlip
-                cDir = dirDegOut;
-            end
+        % 1. 统一解析传播方向。匹配、结果保存和可视化共用该方向。
+        directionResolution = resolveCrestDirection( ...
+            rawLat, rawLon, mooring_lat, mooring_lon);
+        if ~directionResolution.isValid
+            % 需要翻转但 doFlip=false 的波锋不进入任何候选事件。
+            continue;
         end
+        cDir = directionResolution.dirDeg;
 
         % if cDir >= 15 & cDir <= 165
         %     % if max(rawLat(~isnan(rawLat))) < 19.2 & max(rawLat(~isnan(rawLat))) < 114.5
@@ -133,7 +133,7 @@ for k = 1:length(shp_filelist)
             [isPass, propSpeed, crest_min_dis] = isCrestPassMooring_capsule_dir(rawLat, rawLon, shp_time, ...
                 current_mode, mooring_lat, mooring_lon, ...
                 st_times(target_mooring_idx), ed_times(target_mooring_idx), ...
-                60, 86400*10, 100000);
+                60, 86400*10, 100000, directionResolution);
 
             if isPass
                 % 计算速度差

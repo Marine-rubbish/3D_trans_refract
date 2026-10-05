@@ -1,0 +1,67 @@
+<h2>波包归类绘图方式</h2>
+<p class="subtitle">同色代表算法归为同一波包，灰色代表未归包；P2-R1 表示波包 2 中的第 1 条已观测波锋。</p>
+
+<div class="cards">
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:20px;background:#f7f7f8">
+      <svg viewBox="0 0 360 190" width="100%" aria-label="整景总览示意图">
+        <rect x="12" y="12" width="336" height="166" rx="8" fill="#fff" stroke="#d3d4da"/>
+        <path d="M45 48 C105 28,180 38,306 30" fill="none" stroke="#02743b" stroke-width="4"/>
+        <path d="M48 72 C112 53,184 62,310 55" fill="none" stroke="#02743b" stroke-width="4"/>
+        <path d="M52 99 C118 85,192 89,312 85" fill="none" stroke="#80c1ff" stroke-width="4"/>
+        <path d="M58 122 C124 110,200 116,316 110" fill="none" stroke="#80c1ff" stroke-width="4"/>
+        <path d="M80 151 C145 140,220 149,326 140" fill="none" stroke="#9ca3af" stroke-width="3" stroke-dasharray="6 5"/>
+        <text x="45" y="40" font-size="12" fill="#004d26">P1-R1</text>
+        <text x="48" y="66" font-size="12" fill="#004d26">P1-R2</text>
+        <text x="252" y="80" font-size="12" fill="#2563eb">P2-R1</text>
+      </svg>
+    </div>
+    <div class="card-body">
+      <h3>A 整景总览</h3>
+      <p>一张图显示该SHP中的全部波锋，适合快速发现不同波包被错误合并。</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:20px;background:#f7f7f8">
+      <svg viewBox="0 0 360 190" width="100%" aria-label="逐包核查示意图">
+        <rect x="12" y="12" width="336" height="166" rx="8" fill="#fff" stroke="#d3d4da"/>
+        <path d="M40 38 C102 26,175 31,315 24" fill="none" stroke="#d3d4da" stroke-width="2"/>
+        <path d="M42 60 C108 48,180 52,315 48" fill="none" stroke="#d3d4da" stroke-width="2"/>
+        <path d="M45 89 C112 74,188 80,316 73" fill="none" stroke="#02743b" stroke-width="5"/>
+        <path d="M49 119 C118 103,193 109,319 101" fill="none" stroke="#0fdc78" stroke-width="5"/>
+        <path d="M55 150 C122 137,201 142,322 134" fill="none" stroke="#85fabf" stroke-width="5"/>
+        <text x="47" y="82" font-size="12" fill="#004d26">R1</text>
+        <text x="51" y="113" font-size="12" fill="#004d26">R2</text>
+        <text x="57" y="144" font-size="12" fill="#004d26">R3</text>
+      </svg>
+    </div>
+    <div class="card-body">
+      <h3>B 逐包核查</h3>
+      <p>每次突出一个波包，其余波锋淡化，组内关系最清楚，但不容易发现跨包误合并。</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:20px;background:#f7f7f8">
+      <svg viewBox="0 0 360 190" width="100%" aria-label="双视图示意图">
+        <rect x="8" y="12" width="164" height="166" rx="8" fill="#fff" stroke="#0fdc78" stroke-width="2"/>
+        <rect x="188" y="12" width="164" height="166" rx="8" fill="#fff" stroke="#d3d4da"/>
+        <path d="M25 43 C65 30,112 38,156 29" fill="none" stroke="#02743b" stroke-width="3"/>
+        <path d="M28 67 C68 54,114 61,158 53" fill="none" stroke="#02743b" stroke-width="3"/>
+        <path d="M30 98 C72 86,118 91,159 85" fill="none" stroke="#80c1ff" stroke-width="3"/>
+        <path d="M34 123 C76 111,121 117,160 109" fill="none" stroke="#80c1ff" stroke-width="3"/>
+        <path d="M205 52 C245 35,293 42,336 34" fill="none" stroke="#02743b" stroke-width="5"/>
+        <path d="M209 93 C250 77,297 83,339 75" fill="none" stroke="#0fdc78" stroke-width="5"/>
+        <text x="17" y="167" font-size="12" fill="#52525b">整景</text>
+        <text x="197" y="167" font-size="12" fill="#52525b">当前波包 P1</text>
+        <text x="207" y="47" font-size="12" fill="#004d26">R1</text>
+        <text x="211" y="88" font-size="12" fill="#004d26">R2</text>
+      </svg>
+    </div>
+    <div class="card-body">
+      <h3>C 总览加逐包</h3>
+      <p>左侧看整景分组，右侧放大当前波包；回车切换波包，兼顾误合并和头尾检查。</p>
+    </div>
+  </div>
+</div>

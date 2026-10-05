@@ -59,9 +59,9 @@ bearingToMoor = mod(bearingToMoor, 360);
 
 angDiff = abs(wrapTo180(dirDegIn - bearingToMoor)); % 与系泊点方向的夹角
 
-% doFlip = isStraight && (angDiff > 90);
+doFlip = isStraight && (angDiff > 90);
 
-doFlip = isStraight;
+% doFlip = isStraight;
 
 dirDegOut = dirDegIn;
 if doFlip
