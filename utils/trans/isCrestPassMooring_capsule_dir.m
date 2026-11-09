@@ -1,6 +1,7 @@
 function [isPass, propSpeed, crest_min_dis, details] = isCrestPassMooring_capsule_dir( ...
     crestLat, crestLon, crestTime, crestType, moorLat, moorLon, ...
-    moorStTime, moorEdTime, teps, tlim, radius, directionResolution)
+    moorStTime, moorEdTime, teps, tlim, radius, directionResolution, ...
+    directOverlapRadiusMeters)
 % isCrestPassMooring_capsule_dir 解析判断平移波峰线能否到达系泊点。
 %
 % 几何模型
@@ -21,12 +22,15 @@ function [isPass, propSpeed, crest_min_dis, details] = isCrestPassMooring_capsul
 %   radius             允许的最大横向距离（米）。
 %   directionResolution 可选；resolveCrestDirection 的返回结构。主匹配
 %                       入口应传入同一结构，保证匹配与保存使用同一方向。
+%   directOverlapRadiusMeters 可选；成像时刻位于系泊事件内时，波锋到
+%                       系泊点的实际线距不超过该值则直接通过。默认 5000 m。
 %
 % 输出
-%   isPass             几何可达，且横向最近点的传播位移与系泊时间方向
-%                      一致时为 true。
-%   propSpeed          施加 5 m/s 硬上限后的可行正速度包络 [vmin,vmax]
-%                      （m/s）；后续匈牙利匹配继续使用该区间计算速度差。
+%   isPass             直接时空重合，或几何可达且横向最近点的传播位移与
+%                      系泊时间方向一致时为 true。
+%   propSpeed          横向最近点在系泊事件时间窗内对应的可行速度区间
+%                      [vmin,vmax]（m/s），并施加 5 m/s 硬上限。直接时空
+%                      重合时返回兼容评分使用的 [0,5]。
 %   crest_min_dis      在 dPhysical 位移范围内，波峰扫掠区域到系泊点的最短
 %                      距离（米）。
 %   details            诊断结构，保存方向、时间、位移和速度区间等中间结果。
@@ -37,9 +41,10 @@ function [isPass, propSpeed, crest_min_dis, details] = isCrestPassMooring_capsul
 %   正速度要求 d 与 dt 同号。
 %
 % 判定策略
-%   在有限折线的连续线段上寻找横向距离系泊点最近的点。对仅位于遥感时间
-%   之后的系泊事件，该点的 d 必须为正；对仅位于遥感时间之前的事件，该点
-%   的 d 必须为负。最近点位于 d=0 或时间窗跨越遥感时刻时拒绝。
+%   在有限折线的连续线段上寻找横向距离系泊点最近的点。若系泊事件覆盖
+%   遥感时刻，且波锋到系泊点的实际线距不超过 directOverlapRadiusMeters，
+%   则作为直接观测证据通过。其他仅位于遥感时间之后的事件要求最近点 d
+%   为正；仅位于遥感时间之前的事件要求 d 为负。其余跨时刻事件拒绝。
 %   初始方向位于 30°–180° 时，必须通过 maybeFlipCrestDir 的翻转条件；
 %   doFlip=false 时拒绝。可行速度与 (0,5] m/s 无交集时拒绝。
 %   feasibleSpeedIntervals 只作为模态速度范围诊断，不参与 isPass。
@@ -54,6 +59,9 @@ if nargin < 11 || isempty(radius), radius = 0; end
 if nargin < 10 || isempty(tlim), tlim = inf; end
 if nargin < 9 || isempty(teps), teps = 0; end
 if nargin < 12, directionResolution = []; end
+if nargin < 13 || isempty(directOverlapRadiusMeters)
+    directOverlapRadiusMeters = 5000;
+end
 details.searchToleranceSeconds = teps;
 if ~isscalar(radius) || ~isfinite(radius) || radius < 0
     error('radius must be a finite nonnegative scalar in meters.');
@@ -61,6 +69,13 @@ end
 if ~isscalar(tlim) || isnan(tlim) || tlim <= 0
     error('tlim must be a positive scalar in seconds.');
 end
+if ~isscalar(directOverlapRadiusMeters) || ...
+        ~isfinite(directOverlapRadiusMeters) || ...
+        directOverlapRadiusMeters < 0
+    error(['directOverlapRadiusMeters must be a finite nonnegative ', ...
+        'scalar in meters.']);
+end
+details.directOverlapRadiusMeters = directOverlapRadiusMeters;
 
 %% 2. 清理波峰坐标
 % 经纬度必须成对有效；统一转换为列向量，避免输入行列方向影响后续矩阵运算。
@@ -122,6 +137,8 @@ if any(~isfinite(dt)) || dtLo > dtHi
 end
 timeDirection = classifyTimeDirection(dtLo, dtHi);
 details.timeDirection = timeDirection;
+eventContainsSensingTime = dtLo <= 0 && dtHi >= 0;
+details.eventContainsSensingTime = eventContainsSensingTime;
 
 %% 6. 转到局部米制平面坐标
 % x 指向东，y 指向北。u 是传播方向单位向量：
@@ -154,12 +171,15 @@ closestSignedCrossTrackMeters = NaN;
 closestAlongDisplacementMeters = NaN;
 closestSegment = NaN;
 closestSegmentParameter = NaN;
+geometricDistanceMeters = inf;
 
 %% 8. 逐线段执行解析横向走廊求交
 % 与旧函数不同，这里遍历 1:numel(x)-1，因此最后一条线段也参与判断。
 for i = 1:numel(x)-1
     a = [x(i); y(i)];
     b = [x(i+1); y(i+1)];
+    geometricDistanceMeters = min(geometricDistanceMeters, ...
+        pointToSegmentDistance(q, a, b));
 
     % 在连续线段上解析求横向距离最小点。若不同线段的最小横向距离在
     % 数值误差内相同，则取 |d| 更小者，减少折线点存储顺序的影响。
@@ -225,10 +245,33 @@ details.closestSignedCrossTrackMeters = closestSignedCrossTrackMeters;
 details.closestAlongDisplacementMeters = closestAlongDisplacementMeters;
 details.closestSegment = closestSegment;
 details.closestSegmentParameter = closestSegmentParameter;
+details.geometricDistanceMeters = geometricDistanceMeters;
 details.closestDirectionStatus = classifySignedDisplacement( ...
     closestAlongDisplacementMeters, timeDirection);
+% 速度和方向使用同一个横向最近点。整条波锋的区间继续保留在
+% rawSpeedIntervals / limitedSpeedIntervals 中，只用于诊断，不再参与评分。
+closestDInterval = [closestAlongDisplacementMeters, ...
+    closestAlongDisplacementMeters];
+details.closestRawSpeedIntervals = speedIntervalsFor( ...
+    closestDInterval, [dtLo, dtHi], [0, inf]);
+details.closestLimitedSpeedIntervals = speedIntervalsFor( ...
+    closestDInterval, [dtLo, dtHi], [0, maxPropagationSpeedMps]);
+details.closestModeSpeedIntervals = speedIntervalsFor( ...
+    closestDInterval, [dtLo, dtHi], cBound);
 
 %% 10. isPass 判定
+% 成像时波锋已经贴近系泊点时，空间和时间直接重合优先于传播方向判定。
+% 返回 [0,5] 只用于兼容现有速度区间评分，使该边得到零代价。
+if eventContainsSensingTime && ...
+        geometricDistanceMeters <= directOverlapRadiusMeters
+    isPass = true;
+    propSpeed = [0, maxPropagationSpeedMps];
+    crest_min_dis = min(crest_min_dis, geometricDistanceMeters);
+    details.directOverlap = true;
+    details.reason = "direct_spatiotemporal_overlap";
+    return;
+end
+
 % 几何上完全无法进入 radius 时，无条件拒绝。
 if isempty(allDIntervals)
     details.reason = "cross_track_outside_radius";
@@ -254,9 +297,9 @@ if details.closestDirectionStatus < 0
     return;
 end
 
-% 最近点方向一致后，还必须存在不超过 5 m/s 的正速度。
-if isempty(limitedSpeedIntervals)
-    if isempty(rawSpeedIntervals)
+% 最近点方向一致后，该点还必须存在不超过 5 m/s 的正速度。
+if isempty(details.closestLimitedSpeedIntervals)
+    if isempty(details.closestRawSpeedIntervals)
         details.reason = "no_positive_speed_interval";
     else
         details.reason = "speed_above_5_mps";
@@ -276,8 +319,8 @@ end
 % end
 
 isPass = true;
-propSpeed = [min(details.limitedSpeedIntervals(:,1)), ...
-             max(details.limitedSpeedIntervals(:,2))];
+propSpeed = [min(details.closestLimitedSpeedIntervals(:,1)), ...
+             max(details.closestLimitedSpeedIntervals(:,2))];
 details.reason = "pass";
 end
 
@@ -293,8 +336,12 @@ details = struct( ...
     'speedBounds', [NaN NaN], ...
     'maxPropagationSpeedMps', 5, ...
     'searchToleranceSeconds', NaN, ...
+    'directOverlapRadiusMeters', 5000, ...
     'timeRangeSeconds', [NaN NaN], ...
     'timeDirection', NaN, ...
+    'eventContainsSensingTime', false, ...
+    'directOverlap', false, ...
+    'geometricDistanceMeters', inf, ...
     'physicalDisplacementRangeMeters', [NaN NaN], ...
     'displacementIntervalsMeters', zeros(0,2), ...
     'directionalDisplacementIntervalsMeters', zeros(0,2), ...
@@ -308,7 +355,10 @@ details = struct( ...
     'closestAlongDisplacementMeters', NaN, ...
     'closestSegment', NaN, ...
     'closestSegmentParameter', NaN, ...
-    'closestDirectionStatus', NaN);
+    'closestDirectionStatus', NaN, ...
+    'closestRawSpeedIntervals', zeros(0,2), ...
+    'closestLimitedSpeedIntervals', zeros(0,2), ...
+    'closestModeSpeedIntervals', zeros(0,2));
 end
 
 function direction = classifyTimeDirection(dtLo, dtHi)

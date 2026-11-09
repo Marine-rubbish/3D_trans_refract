@@ -10,6 +10,11 @@ resample_res = 250; % 波峰线重采样分辨率 (m)
 lambda_dir = 0;     % 默认不使用
 output_mat_name = 'matched_results_with_capsules.mat';
 
+if exist('intlinprog', 'file') ~= 2
+    error(['全局有序分配需要 Optimization Toolbox 的 intlinprog。', ...
+        '请先安装该工具箱，再运行生产批处理。']);
+end
+
 % Debug entry points. Keep disabled for the normal batch run.
 DEBUG.plotKPoint = false;
 DEBUG.targetCrestIdx = []; % e.g. 1388; [] means allow every crest when plotting is enabled
@@ -21,6 +26,18 @@ mooring_lon = 115.76666666666667;
 % 东沙坐标
 dongsha_lat = 20.7;
 dongsha_lon = 116.8;
+
+% 波包几何参数与人工核查入口保持一致。分组只读取同景波锋几何，
+% 不使用系泊事件，因此不会把待匹配结果反向泄漏到候选波包。
+packet_config = struct( ...
+    'mooringLat', mooring_lat, ...
+    'mooringLon', mooring_lon, ...
+    'packetDirectionToleranceDeg', 25, ...
+    'packetMinOverlapMeters', 1000, ...
+    'packetMinOverlapFraction', 0.5, ...
+    'packetMinSeparationMeters', 250, ...
+    'packetMaxNeighborGapMeters', 8000, ...
+    'packetMaxSpanMeters', 40000);
 
 day_delay = 3;
 
@@ -50,12 +67,15 @@ w = Inf(numCrests, size(T, 1));            % 速度差 (用于匹配权重)
 dir_diff_mat = Inf(numCrests, size(T, 1)); % 方向差矩阵
 
 crestLen = zeros(numCrests, size(T, 1));
-crestDir_arr = zeros(numCrests, 1);
+crestDir_arr = NaN(numCrests, 1);
 min_dis = zeros(numCrests, size(T, 1));
 crest_sensing_time = cell(numCrests, 1);
 temp_crest_data = cell(numCrests, 1); 
 signedPos_list = zeros(size(crest_sensing_time));
 isPass_list = zeros(size(crest_sensing_time));
+crest_scene_id = zeros(numCrests, 1);
+crest_raw_lat = cell(numCrests, 1);
+crest_raw_lon = cell(numCrests, 1);
 
 idxCrests = 0;
 fprintf('开始处理 %d 个文件...\n', length(shp_filelist));
@@ -75,6 +95,12 @@ for k = 1:length(shp_filelist)
         global_idx = idxCrests + i;
         rawLat = crestLines(i).Y;
         rawLon = crestLines(i).X;
+
+        % 保存波包分组需要的原始几何。无效方向仍保留在目录中，但由于
+        % direction_deg 为 NaN，group_scene_wave_packets 会将其排除。
+        crest_scene_id(global_idx) = k;
+        crest_raw_lat{global_idx} = rawLat(:);
+        crest_raw_lon{global_idx} = rawLon(:);
         
         % 1. 统一解析传播方向。匹配、结果保存和可视化共用该方向。
         directionResolution = resolveCrestDirection( ...
@@ -136,7 +162,9 @@ for k = 1:length(shp_filelist)
                 60, 86400*10, 100000, directionResolution);
 
             if isPass
-                % 计算速度差
+                % 最近波段的可行速度区间必须覆盖本站 KdV 波速。
+                % 区间外候选保持 Inf，避免巨大未匹配代价强制保留
+                % 明显不一致的有限速度差配对。
                 if min(abs(propSpeed)) <= param_val && max(abs(propSpeed)) >= param_val
                     s_diff = 0;
                 else
@@ -159,11 +187,28 @@ for k = 1:length(shp_filelist)
     idxCrests = idxCrests + length(crestLines);
 end
 
-%% ==================== 匈牙利算法匹配 ====================
-valid_idx = find(~all(isinf(w), 2));
-w_vaild = w(valid_idx, :);
-[M, ~, ~] = matchpairs(w, 10000000);
+%% ==================== 波包有序全局匹配 ====================
+% packet_rank=1 表示传播方向上最靠前的已提取波锋。求解器允许包内
+% 波锋或事件缺口，但禁止靠前波锋对应到更晚的系泊事件。
+crest_catalog = table((1:numCrests)', crest_scene_id, ...
+    crest_raw_lat, crest_raw_lon, crestDir_arr, ...
+    'VariableNames', {'crest_idx', 'scene_id', 'latitude', ...
+    'longitude', 'direction_deg'});
+packet_catalog = group_scene_wave_packets(crest_catalog, packet_config);
+
+[M, matching_diagnostics] = matchpairs_ordered_packets( ...
+    w, 10000000, packet_catalog.packet_id, ...
+    packet_catalog.packet_rank, st_times);
 num_matches = size(M, 1);
+
+fprintf(['全局有序匹配完成：%d 对，改配事件 %d 个，未配波锋 %d 条，', ...
+    '未配事件 %d 个，顺序约束 %d 条，总速度差 %.6g。\n'], ...
+    matching_diagnostics.match_count, ...
+    matching_diagnostics.changed_event_assignment_count, ...
+    matching_diagnostics.unmatched_crest_count, ...
+    matching_diagnostics.unmatched_event_count, ...
+    matching_diagnostics.order_cut_count, ...
+    matching_diagnostics.total_cost);
 
 %% ==================== 结果提取 ====================
 out_mooring_time = NaT(num_matches, 1);
@@ -175,10 +220,13 @@ out_peak_lon     = NaN(num_matches, 1);
 out_peak_lat     = NaN(num_matches, 1);
 out_K_mooring    = NaN(num_matches, 1);
 out_mode         = NaN(num_matches, 1);
+out_kdv_speed    = NaN(num_matches, 1);
 out_speed_diff   = NaN(num_matches, 1);
 out_dir_diff     = NaN(num_matches, 1); % [新增] 初始化方向差数组
 out_crest_idx    = M(:, 1);
 out_crest_len    = NaN(num_matches, 1);
+out_packet_id    = packet_catalog.packet_id(M(:, 1));
+out_packet_rank  = packet_catalog.packet_rank(M(:, 1));
 
 fprintf('匹配完成，共 %d 对。正在提取结果...\n', num_matches);
 
@@ -189,6 +237,7 @@ for k = 1:num_matches
     % 1. 基础信息
     out_mooring_time(k) = st_times(mIdx);
     out_mode(k)         = obs_modes(mIdx);
+    out_kdv_speed(k)    = T{mIdx, 4}; % 本站 KdV 波速 (m/s)
     
     % [新增] 提取差值
     out_speed_diff(k)   = w(cIdx, mIdx) - lambda_dir * dir_diff_mat(cIdx, mIdx);          % 速度差
@@ -232,6 +281,7 @@ end
 
 % 同步调整所有变量
 mode         = out_mode(sort_idx);
+kdv_speed    = out_kdv_speed(sort_idx);
 speed_diff   = out_speed_diff(sort_idx);
 dir_diff     = out_dir_diff(sort_idx); % [新增] 同步排序
 crest_time   = out_crest_time(sort_idx);
@@ -242,12 +292,16 @@ peak_lon     = out_peak_lon(sort_idx);
 peak_lat     = out_peak_lat(sort_idx);
 K_mooring    = out_K_mooring(sort_idx);
 crest_idx    = out_crest_idx(sort_idx);
+packet_id    = out_packet_id(sort_idx);
+packet_rank  = out_packet_rank(sort_idx);
 
 %% ==================== 保存结果 (MAT + XLSX) ====================
 % 1. 保存 MAT
 mat_name = 'match_res_90deg_15_165.mat';
 save(output_mat_name, 'mode', 'mooring_time', 'speed_diff', 'dir_diff', ...
-    'crest_time', 'crest_dir', 'crest_lon', 'crest_lat', 'peak_lon', 'peak_lat', 'K_mooring', 'crest_idx');
+    'crest_time', 'crest_dir', 'crest_lon', 'crest_lat', 'peak_lon', ...
+    'peak_lat', 'K_mooring', 'crest_idx', 'packet_id', 'packet_rank', ...
+    'matching_diagnostics', 'kdv_speed');
 
 % % 2. 保存 Excel
 % fprintf('正在生成 Excel 表格...\n');

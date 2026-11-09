@@ -9,7 +9,7 @@ function result = resolveCrestDirection(crestLat, crestLon, moorLat, moorLon)
 %   isValid             是否允许该波锋进入候选匹配。
 %   initialDirDeg       calcDirection 给出的初始导航角。
 %   dirDeg              完成必要翻转后的最终导航角。
-%   flipRequired        初始方向是否位于 30°–180° 翻转区间。
+%   flipRequired        初始方向是否位于 45°–180° 翻转区间。
 %   doFlip              maybeFlipCrestDir 是否允许翻转。
 %   flipStats           maybeFlipCrestDir 的几何诊断。
 %   reason              pass、invalid_crest 或
@@ -40,7 +40,12 @@ initialDirDeg = mod(90-calcDirection(lat, lon), 360);
 result.initialDirDeg = initialDirDeg;
 result.dirDeg = initialDirDeg;
 
-if initialDirDeg > 0 && initialDirDeg < 180
+if initialDirDeg > 0 && initialDirDeg < 45
+    result.reason = "direction_flip_required_but_rejected";
+    return;
+end
+
+if initialDirDeg >= 45 && initialDirDeg < 180
     result.flipRequired = true;
     [dirDegOut, doFlip, flipStats] = ...
         maybeFlipCrestDir(lat, lon, moorLat, moorLon);

@@ -20,6 +20,7 @@ end
 n = numel(S.crest_lon);
 crestIdx = fieldOr(S, 'crest_idx', (1:n)');
 mode = fieldOr(S, 'mode', nan(n,1));
+kdvSpeed = fieldOr(S, 'kdv_speed', nan(n,1));
 speedDiff = fieldOr(S, 'speed_diff', nan(n,1));
 dirDiff = fieldOr(S, 'dir_diff', nan(n,1));
 kMooring = fieldOr(S, 'K_mooring', nan(n,1));
@@ -34,9 +35,10 @@ moorLon = 115.76666666666667;
 
 emptyCrest = struct('row', 0, 'id', 0, 'mode', 0, 'dir', 0, ...
     'dtHours', 0, 'alongKm', 0, 'crossKm', 0, 'speed', 0, ...
-    'speedDiff', 0, 'dirDiff', 0, 'k', 0, 'signOK', false, ...
-    'crestTime', '', 'mooringTime', '', 'peakLon', 0, 'peakLat', 0, ...
-    'hitLon', 0, 'hitLat', 0, 'lon', [], 'lat', [], 'dLon', 0, 'dLat', 0);
+    'kdvSpeed', 0, 'speedDiff', 0, 'dirDiff', 0, 'k', 0, ...
+    'signOK', false, 'crestTime', '', 'mooringTime', '', ...
+    'peakLon', 0, 'peakLat', 0, 'hitLon', 0, 'hitLat', 0, ...
+    'lon', [], 'lat', [], 'dLon', 0, 'dLat', 0);
 crests = repmat(emptyCrest, n, 1);
 speeds = nan(n,1);
 dtHoursAll = nan(n,1);
@@ -80,6 +82,7 @@ for i = 1:n
     crests(i).alongKm = alongM / 1000;
     crests(i).crossKm = crossM / 1000;
     crests(i).speed = speed;
+    crests(i).kdvSpeed = scalarAt(kdvSpeed, i);
     crests(i).speedDiff = scalarAt(speedDiff, i);
     crests(i).dirDiff = scalarAt(dirDiff, i);
     crests(i).k = scalarAt(kMooring, i);

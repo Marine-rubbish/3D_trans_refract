@@ -32,6 +32,7 @@ crest_lat = cell(n, 1);
 peak_lon = nan(n, 1);
 peak_lat = nan(n, 1);
 K_mooring = nan(n, 1);
+kdv_speed = nan(n, 1);
 speed_diff = nan(n, 1);
 dir_diff = nan(n, 1);
 closest_along_m = nan(n, 1);
@@ -75,7 +76,9 @@ for i = 1:n
         event.start_time, event.end_time, ...
         report.config.searchToleranceSeconds, ...
         report.config.timeLimitSeconds, report.config.radiusMeters);
-    assert(isPass && details.closestDirectionStatus == 1, ...
+    physicsValid = isPass && (details.closestDirectionStatus == 1 || ...
+        details.directOverlap);
+    assert(physicsValid, ...
         'Assigned pair crest=%d event=%d failed current physics.', ...
         cIdx, eIdx);
 
@@ -122,6 +125,7 @@ for i = 1:n
     peak_lon(i) = pLon;
     peak_lat(i) = pLat;
     K_mooring(i) = K;
+    kdv_speed(i) = targetSpeed;
     speed_diff(i) = speedDifference;
     dir_diff(i) = directionDifference;
     closest_along_m(i) = details.closestAlongDisplacementMeters;
@@ -142,6 +146,7 @@ crest_lat = crest_lat(order);
 peak_lon = peak_lon(order);
 peak_lat = peak_lat(order);
 K_mooring = K_mooring(order);
+kdv_speed = kdv_speed(order);
 speed_diff = speed_diff(order);
 dir_diff = dir_diff(order);
 closest_along_m = closest_along_m(order);
@@ -156,9 +161,10 @@ if ~isempty(outDir) && ~isfolder(outDir)
 end
 save(outputPath, 'mode', 'mooring_time', 'crest_time', 'crest_idx', ...
     'event_idx', 'crest_dir', 'crest_lon', 'crest_lat', ...
-    'peak_lon', 'peak_lat', 'K_mooring', 'speed_diff', 'dir_diff', ...
-    'closest_along_m', 'closest_cross_m', 'closest_point_lon', ...
-    'closest_point_lat', 'closest_direction_status');
+    'peak_lon', 'peak_lat', 'K_mooring', 'kdv_speed', 'speed_diff', ...
+    'dir_diff', 'closest_along_m', 'closest_cross_m', ...
+    'closest_point_lon', 'closest_point_lat', ...
+    'closest_direction_status');
 
 fprintf('Wrote %s (%d matched pairs)\n', outputPath, n);
 end

@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="1240" viewBox="0 0 1000 1240" role="img" aria-labelledby="title desc">
+  <title id="title">波锋匹配主线流程</title>
+  <desc id="desc">读取数据、方向筛选、候选检测、速度评分、波包分组、全局有序匹配。按2026年11月9日工作区代码绘制。</desc>
+  <style>
+    text{font-family:"PingFang SC","Microsoft YaHei",Arial,sans-serif;fill:#17212b;text-anchor:middle}
+    .heading{font-size:26px;font-weight:600}.label{font-size:19px;font-weight:600}
+    .detail{font-size:16px;fill:#43515f}.code{font-family:Menlo,Consolas,monospace;font-size:13px;fill:#516273}
+    .node{fill:#f7f8fa;stroke:#c8d0d8;stroke-width:1.5;rx:10}
+    .focus{stroke:#238357;stroke-width:2}
+    .arrow{fill:none;stroke:#647381;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;marker-end:url(#arrow)}
+  </style>
+  <defs><marker id="arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" markerUnits="userSpaceOnUse" orient="auto"><path d="M1 1 L7 4 L1 7 Z" fill="#647381"/></marker></defs>
+  <rect width="1000" height="1240" fill="white"/>
+  <text class="heading" x="500" y="44">波锋匹配主线流程</text>
+  <text class="detail" x="500" y="74">代码定位：在 TRAE 按 ⌘P，输入“文件路径:行号”</text>
+
+  <rect class="node" x="150" y="105" width="700" height="100"/>
+  <text class="label" x="500" y="134">读取 SHP 波锋与系泊事件</text>
+  <text class="detail" x="500" y="160">文件名解析成像时间，加8小时；事件开始时间限定在成像前后3天</text>
+  <text class="code" x="500" y="187">src/simu_all_crests_trans_dir_pro.m:44</text>
+  <path class="arrow" d="M500 205 V255"/>
+
+  <rect class="node" x="150" y="255" width="700" height="105"/>
+  <text class="label" x="500" y="284">解析传播方向：resolveCrestDirection</text>
+  <text class="detail" x="500" y="311">0° &lt; 初始方向 &lt; 45°：拒配；45° ≤ 初始方向 &lt; 180°：条件翻转</text>
+  <text class="detail" x="500" y="335">翻转条件未通过则拒配；其他角度保留原方向</text>
+  <text class="code" x="500" y="352">utils/trans/resolveCrestDirection.m:39</text>
+  <path class="arrow" d="M850 306 H880 V413 H850"/>
+  <rect class="node" x="660" y="391" width="190" height="44"/>
+  <text class="detail" x="755" y="419">拒配：不生成候选</text>
+  <path class="arrow" d="M500 360 V460"/>
+
+  <rect class="node" x="150" y="460" width="700" height="115"/>
+  <text class="label" x="500" y="489">逐对检测：isCrestPassMooring_capsule_dir</text>
+  <text class="detail" x="500" y="515">原始波锋 → 实际线距、传播横向最近点、沿程位移、时间窗</text>
+  <text class="detail" x="500" y="540">近站规则优先；其余候选执行传播检查</text>
+  <text class="code" x="500" y="561">utils/trans/isCrestPassMooring_capsule_dir.m:262</text>
+  <path class="arrow" d="M350 575 V600 Q350 614 270 614 V640"/>
+  <path class="arrow" d="M650 575 V600 Q650 614 730 614 V640"/>
+
+  <rect class="node" x="75" y="640" width="390" height="115"/>
+  <text class="label" x="270" y="667">跨成像时刻的近站候选</text>
+  <text class="detail" x="270" y="690">事件覆盖成像时刻；实际线距 ≤5 km</text>
+  <text class="detail" x="270" y="714">返回 [0,5] m/s；不锁定配对</text>
+  <text class="code" x="270" y="743">传播函数:265</text>
+  <rect class="node" x="535" y="640" width="390" height="115"/>
+  <text class="label" x="730" y="670">其余候选执行传播检查</text>
+  <text class="detail" x="730" y="695">横向走廊100 km；时间窗不跨成像时刻</text>
+  <text class="detail" x="730" y="719">最近点位移同号；正速度区间与(0,5]相交</text>
+  <text class="code" x="730" y="743">传播函数:275（未通过则拒配）</text>
+  <path class="arrow" d="M270 755 V780 Q270 794 400 794 V820"/>
+  <path class="arrow" d="M730 755 V780 Q730 794 600 794 V820"/>
+
+  <rect class="node" x="150" y="820" width="700" height="100"/>
+  <text class="label" x="500" y="849">生成权重矩阵：本站 KdV 波速到速度区间的距离</text>
+  <text class="detail" x="500" y="875">区间内代价为0；区间外取边界差；拒配候选保持 Inf</text>
+  <text class="code" x="500" y="902">src/simu_all_crests_trans_dir_pro.m:164</text>
+  <path class="arrow" d="M500 920 V970"/>
+
+  <rect class="node focus" x="150" y="970" width="700" height="145"/>
+  <text class="label" x="500" y="1000">同景波锋几何分组 → 全局一对一有序匹配</text>
+  <text class="detail" x="500" y="1028">group_scene_wave_packets → matchpairs_ordered_packets</text>
+  <text class="detail" x="500" y="1055">禁止包内倒序；先最大化匹配数，再最小化总速度差</text>
+  <text class="code" x="500" y="1081">src/simu_all_crests_trans_dir_pro.m:197</text>
+  <text class="code" x="500" y="1101">utils/trans/matchpairs_ordered_packets.m:1</text>
+  <text class="detail" x="500" y="1155">输出配对 → 进入 K_mooring 计算与结果保存链路</text>
+  <text class="code" x="500" y="1182">注：方向差只记录；当前没有速度差硬拒配阈值。</text>
+  <text class="code" x="500" y="1208">代码快照：2026-11-09；行号随后续修改可能变化。</text>
+</svg>

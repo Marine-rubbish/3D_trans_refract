@@ -18,9 +18,11 @@ function result = review_scene_match_order(config)
 % 命令行输入：
 %   N = 正常；D = 乱序；U = 无法判断；Z = 撤销上一条；Q = 保存并退出。
 %
-% 每个判断都会立即写入 CSV。再次运行时，数据签名一致的已完成项会
-% 自动跳过。只有一条已匹配波锋的单元无法检验先后关系，程序会自动
-% 记录为 single_match，并从乱序率分母中排除。
+% 每个判断都会立即写入 CSV。历史记录只用于同批数据断点续查：
+% 数据变化或旧 CSV 无法读取时，自动使用带 _run001 等后缀的新文件，
+% 保留旧文件。config.resumeReviews=false 可强制开启全新一轮核查。
+% 只有一条已匹配波锋的单元无法检验先后关系，程序会自动记录为
+% single_match，并从乱序率分母中排除。
 %
 % 本工具只读取已有匹配，不修改 MAT 中的分配结果。旧 MAT 只保存了
 % 系泊事件的起始时刻，因此这里的到站顺序统一使用 mooring_time。
@@ -43,9 +45,9 @@ validateMatchMapping(matches, crests, config.coordinateToleranceMeters);
 
 packets.display_packet_id = assignDisplayPacketIds(packets);
 units = buildReviewUnits(crests, packets, matches, config);
-reviews = loadReviews(config.outputCsv);
+reviews = emptyReviews();
 
-% 非交互模式只做数据重建和完整核验，便于批量自检，不写任何文件。
+% 批量自检只依赖当前 MAT 和 SHP，不读取历史标签，也不写任何文件。
 if ~config.interactive
     result = buildResult(config, crests, packets, matches, units, reviews, ...
         table(), [], false);
@@ -53,6 +55,7 @@ if ~config.interactive
     return;
 end
 
+[reviews, config] = selectReviewSession(units, config);
 [reviews, addedSingles] = addSingleMatchRows( ...
     reviews, units, config.matPath);
 if addedSingles > 0
@@ -159,7 +162,8 @@ defaults = struct( ...
     'packetMaxSpanMeters', 40000, ...
     'coordinateToleranceMeters', 1500, ...
     'figureVisible', 'on', ...
-    'interactive', true);
+    'interactive', true, ...
+    'resumeReviews', true);
 
 unknown = setdiff(fieldnames(config), fieldnames(defaults));
 if ~isempty(unknown)
@@ -186,6 +190,7 @@ end
 validateattributes(config.coordinateToleranceMeters, {'numeric'}, ...
     {'scalar','finite','positive'});
 validateattributes(config.interactive, {'logical'}, {'scalar'});
+validateattributes(config.resumeReviews, {'logical'}, {'scalar'});
 if ~ismember(string(config.figureVisible), ["on","off"])
     error('figureVisible 必须是 ''on'' 或 ''off''。');
 end
@@ -250,56 +255,20 @@ end
 
 function [crests, packets] = buildCrestCatalog(config)
 %BUILDCRESTCATALOG 按生产入口的 dir 顺序重建全局 crest_idx。
-files = dir(fullfile(config.shpDir, '*.shp'));
-if isempty(files)
-    error('目录中没有 SHP 文件：%s', config.shpDir);
-end
-
-crestIdx = zeros(0,1);
-sceneId = zeros(0,1);
-sceneFile = strings(0,1);
-fileName = strings(0,1);
-featureIndex = zeros(0,1);
-latitude = cell(0,1);
-longitude = cell(0,1);
-directionDeg = zeros(0,1);
-directionStatus = strings(0,1);
-
-next = 0;
-for k = 1:numel(files)
-    shpPath = fullfile(files(k).folder, files(k).name);
-    features = shaperead(shpPath);
-    count = numel(features);
-    rows = next + (1:count);
-
-    crestIdx(rows,1) = rows';
-    sceneId(rows,1) = k;
-    sceneFile(rows,1) = string(files(k).name);
-    fileName(rows,1) = string(shpPath);
-    featureIndex(rows,1) = (1:count)';
-
-    for j = 1:count
-        row = rows(j);
-        latitude{row,1} = features(j).Y(:);
-        longitude{row,1} = features(j).X(:);
-        direction = resolveCrestDirection( ...
-            latitude{row}, longitude{row}, ...
-            config.mooringLat, config.mooringLon);
-        directionStatus(row,1) = direction.reason;
-        if direction.isValid
-            directionDeg(row,1) = direction.dirDeg;
-        else
-            directionDeg(row,1) = NaN;
-        end
+crests = buildCrestReviewCatalog(config.shpDir, 8);
+directionDeg = nan(height(crests),1);
+directionStatus = strings(height(crests),1);
+for row = 1:height(crests)
+    direction = resolveCrestDirection( ...
+        crests.latitude{row}, crests.longitude{row}, ...
+        config.mooringLat, config.mooringLon);
+    directionStatus(row) = direction.reason;
+    if direction.isValid
+        directionDeg(row) = direction.dirDeg;
     end
-    next = next + count;
 end
-
-crests = table(crestIdx, sceneId, sceneFile, fileName, featureIndex, ...
-    latitude, longitude, directionDeg, directionStatus, ...
-    'VariableNames', {'crest_idx','scene_id','scene_file','file_name', ...
-    'feature_index','latitude','longitude','direction_deg', ...
-    'direction_status'});
+crests.direction_deg = directionDeg;
+crests.direction_status = directionStatus;
 packets = group_scene_wave_packets(crests, config);
 end
 
@@ -567,6 +536,56 @@ signature = sprintf(['dir=%.12g;overlap_m=%.12g;overlap_frac=%.12g;' ...
     config.packetMaxNeighborGapMeters, config.packetMaxSpanMeters);
 end
 
+function [reviews, config] = selectReviewSession(units, config)
+%SELECTREVIEWSESSION 选择本轮记录；旧标签失效不阻断当前数据核查。
+% 同名 MAT 被重新写入后，旧记录仍然保留；新的批次使用成对的 run
+% 文件名。再次运行相同配置时会找到相符记录，继续该批未完成的核查。
+baseOutput = config.outputCsv;
+baseSummary = config.summaryCsv;
+runIndex = 0;
+while true
+    outputExists = isfile(config.outputCsv);
+    summaryExists = isfile(config.summaryCsv);
+    if ~outputExists && ~summaryExists
+        reviews = emptyReviews();
+        break;
+    end
+    if config.resumeReviews && outputExists
+        try
+            saved = loadReviews(config.outputCsv);
+            for i = 1:height(saved)
+                unitIndex = find( ...
+                    string({units.scene_file}) == saved.scene_file(i) & ...
+                    string({units.packet_key}) == saved.packet_key(i));
+                if saved.source_mat(i) ~= string(config.matPath) || ...
+                        numel(unitIndex) ~= 1
+                    error('历史记录不属于当前核查数据。');
+                end
+                verifyStoredSignature(saved(i,:), units(unitIndex));
+            end
+            reviews = saved;
+            break;
+        catch
+            % 历史记录是可选的续查缓存。读取失败、缺少字段或数据变化
+            % 都只使这份缓存失效；不能覆盖旧记录，也不能停止本轮。
+        end
+    end
+
+    runIndex = runIndex + 1;
+    [folder, name, ext] = fileparts(baseOutput);
+    config.outputCsv = fullfile(folder, ...
+        sprintf('%s_run%03d%s', name, runIndex, ext));
+    [folder, name, ext] = fileparts(baseSummary);
+    config.summaryCsv = fullfile(folder, ...
+        sprintf('%s_run%03d%s', name, runIndex, ext));
+end
+if runIndex > 0
+    fprintf('已保留原有记录，本轮使用独立文件。\n');
+end
+fprintf('核查记录：%s\n汇总记录：%s\n', ...
+    config.outputCsv, config.summaryCsv);
+end
+
 function reviews = loadReviews(path)
 %LOADREVIEWS 读取历史核查结果，并恢复稳定字段类型。
 reviews = emptyReviews();
@@ -735,16 +754,28 @@ index = find(reviews.source_mat == string(sourceMat) & ...
 end
 
 function verifyStoredSignature(row, unit)
-%VERIFYSTOREDSIGNATURE 分组或匹配变化时禁止静默复用旧标签。
+%VERIFYSTOREDSIGNATURE 只有核查内容一致才允许断点续查。
+% 到站时刻必须参与比较：同一组波锋换配事件后，旧乱序标签会失效。
 expectedCrests = joinNumbers(unit.review_crest_indices, '%.0f');
 expectedRanks = joinNumbers(unit.packet_ranks, '%.0f');
+if unit.evaluable
+    validLabel = ismember(row.human_label, ...
+        ["normal","disordered","uncertain"]);
+else
+    validLabel = row.human_label == "single_match";
+end
 same = row.matched_crest_indices == expectedCrests && ...
     row.matched_packet_ranks == expectedRanks && ...
+    row.mooring_times == joinTimes(unit.review_mooring_times) && ...
+    row.speed_diffs_mps == joinNumbers(unit.review_speed_diffs, '%.12g') && ...
+    row.matched_crest_count == unit.matched_crest_count && ...
+    row.evaluable == unit.evaluable && validLabel && ...
+    isequaln(row.auto_inversion_count, unit.auto_inversion_count) && ...
     row.observed_packet_size == unit.observed_packet_size && ...
     row.group_config == unit.group_config;
 if ~same
     error(['历史标签的数据签名与当前结果不一致：%s / %s。' ...
-        '请另设 outputCsv，或人工确认后删除该旧记录。'], ...
+        '该文件不适用于当前数据的断点续查。'], ...
         unit.scene_file, unit.packet_key);
 end
 end
